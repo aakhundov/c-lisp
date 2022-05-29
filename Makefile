@@ -1,5 +1,5 @@
 all: bin
-	gcc -std=c99 -Wall -g *.c -o ./bin/clisp
+	gcc -std=c99 -Wall -g *.c -ledit -o ./bin/clisp
 
 bin:
 	mkdir ./bin
