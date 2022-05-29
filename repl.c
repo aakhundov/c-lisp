@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "edit.h"
-#include "mpc.h"
+#include "parse.h"
 
 static const char* exit_commands[] = {"exit", "quit", "q"};
 static const size_t n_exit_commands = sizeof(exit_commands) / sizeof(char*);
@@ -20,7 +20,7 @@ static int is_exit_command(char* line) {
     return 0;
 }
 
-void run_repl(mpc_parser_t* program) {
+void run_repl(parser* p) {
     puts("CLisp version 0.0.1");
     puts("Type \"quit\" to quit\n");
 
@@ -33,13 +33,13 @@ void run_repl(mpc_parser_t* program) {
         } else {
             add_history(input);
 
-            mpc_result_t result;
-            if (mpc_parse("<stdin>", input, program, &result)) {
-                mpc_ast_print(result.output);
-                mpc_ast_delete(result.output);
+            result r;
+            if (parser_parse(p, input, &r)) {
+                result_print_tree(&r);
+                result_dispose_tree(&r);
             } else {
-                mpc_err_print(result.error);
-                mpc_err_delete(result.error);
+                result_print_error(&r);
+                result_dispose_error(&r);
             }
         }
 
