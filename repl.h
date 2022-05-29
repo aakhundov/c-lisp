@@ -1,6 +1,8 @@
 #ifndef REPL_H_
 #define REPL_H_
 
-void run_repl();
+#include "mpc.h"
+
+void run_repl(mpc_parser_t* program);
 
 #endif  // REPL_H_
