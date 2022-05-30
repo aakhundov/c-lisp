@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "edit.h"
+#include "eval.h"
 #include "parse.h"
 
 static const char* exit_commands[] = {"exit", "quit", "q"};
@@ -35,7 +36,8 @@ void run_repl(parser* p) {
 
             result r;
             if (parser_parse(p, input, &r)) {
-                result_print_tree(&r);
+                tree t = result_get_tree(&r);
+                printf("%g\n", evaluate(&t));
                 result_dispose_tree(&r);
             } else {
                 result_print_error(&r);

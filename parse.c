@@ -11,6 +11,17 @@ static const char* GRAMMAR =
     program     : /^/ <operator> <expression>+ /$/ ; \
     ";
 
+static tree wrap_mpc_tree(mpc_ast_t* ast) {
+    tree t;
+
+    t.tag = ast->tag;
+    t.content = ast->contents;
+    t.num_children = ast->children_num;
+    t.ast = ast;
+
+    return t;
+}
+
 void parser_init(parser* p) {
     p->num = mpc_new("number");
     p->op = mpc_new("operator");
@@ -28,6 +39,10 @@ int parser_parse(parser* p, char* input, result* r) {
     return mpc_parse("<stdin>", input, p->prog, &(r->res));
 }
 
+tree result_get_tree(result* r) {
+    return wrap_mpc_tree(r->res.output);
+}
+
 void result_print_tree(result* r) {
     mpc_ast_print(r->res.output);
 }
@@ -42,4 +57,8 @@ void result_dispose_tree(result* r) {
 
 void result_dispose_error(result* r) {
     mpc_err_delete(r->res.error);
+}
+
+tree tree_get_child(tree* t, size_t index) {
+    return wrap_mpc_tree(t->ast->children[index]);
 }
