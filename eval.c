@@ -1,5 +1,6 @@
 #include "eval.h"
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -7,7 +8,7 @@
 
 typedef double (*op_fn)(double*, size_t);
 
-static double add(double* args, size_t num_args) {
+static double op_add(double* args, size_t num_args) {
     double result = *args++;
     for (size_t i = 1; i < num_args; i++) {
         result += *args++;
@@ -16,7 +17,7 @@ static double add(double* args, size_t num_args) {
     return result;
 }
 
-static double subtract(double* args, size_t num_args) {
+static double op_subtract(double* args, size_t num_args) {
     if (num_args == 1) {
         return -(*args);
     }
@@ -29,7 +30,7 @@ static double subtract(double* args, size_t num_args) {
     return result;
 }
 
-static double multiply(double* args, size_t num_args) {
+static double op_multiply(double* args, size_t num_args) {
     double result = *args++;
     for (size_t i = 1; i < num_args; i++) {
         result *= *args++;
@@ -38,7 +39,7 @@ static double multiply(double* args, size_t num_args) {
     return result;
 }
 
-static double divide(double* args, size_t num_args) {
+static double op_divide(double* args, size_t num_args) {
     double result = *args++;
     for (size_t i = 1; i < num_args; i++) {
         result /= *args++;
@@ -47,7 +48,7 @@ static double divide(double* args, size_t num_args) {
     return result;
 }
 
-static double modulo(double* args, size_t num_args) {
+static double op_modulo(double* args, size_t num_args) {
     int result = (int)(*args++);
     for (size_t i = 1; i < num_args; i++) {
         result %= (int)(*args++);
@@ -56,20 +57,31 @@ static double modulo(double* args, size_t num_args) {
     return result;
 }
 
+static double op_power(double* args, size_t num_args) {
+    double result = *args++;
+    for (size_t i = 1; i < num_args; i++) {
+        result = pow(result, *args++);
+    }
+
+    return result;
+}
+
 static op_fn get_op_fn(char* op) {
     if (strcmp(op, "+") == 0 || strcmp(op, "add") == 0) {
-        return add;
+        return op_add;
     } else if (strcmp(op, "-") == 0 || strcmp(op, "sub") == 0) {
-        return subtract;
+        return op_subtract;
     } else if (strcmp(op, "*") == 0 || strcmp(op, "mul") == 0) {
-        return multiply;
+        return op_multiply;
     } else if (strcmp(op, "/") == 0 || strcmp(op, "div") == 0) {
-        return divide;
+        return op_divide;
     } else if (strcmp(op, "%") == 0 || strcmp(op, "mod") == 0) {
-        return modulo;
+        return op_modulo;
+    } else if (strcmp(op, "^") == 0 || strcmp(op, "pow") == 0) {
+        return op_power;
     } else {
         // default
-        return add;
+        return op_add;
     }
 }
 

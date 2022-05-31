@@ -5,8 +5,8 @@
 static const char* GRAMMAR =
     "\
     number      : /[+-]?[0-9]*\\.[0-9]+/ | /[+-]?[0-9]+\\.[0-9]*/ | /[+-]?[0-9]+/ ; \
-    operator    : '+' | '-' | '*' | '/' | '%' | \
-                  \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" ; \
+    operator    : '+' | '-' | '*' | '/' | '%' | '^' | \
+                  \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \"pow\"; \
     expression  : <number> | '(' <operator> <expression>+ ')'; \
     program     : /^/ <operator> <expression>+ /$/ ; \
     ";
