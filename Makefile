@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-c -std=c99 -Wall -Werror -fpic -g
-LDFLAGS=
+LDFLAGS=-g
 LDLIBS=-ledit -lm
 OUTPUT_DIR=bin
 
