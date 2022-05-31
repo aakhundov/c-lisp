@@ -7,7 +7,7 @@ static const char* GRAMMAR =
     number      : /[+-]?[0-9]*\\.[0-9]+/ | /[+-]?[0-9]+\\.[0-9]*/ | /[+-]?[0-9]+/ ; \
     operator    : '+' | '-' | '*' | '/' | '%' | '^' | \
                   \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \"pow\" | \
-                  \"min\" | \"max\"; \
+                  \"min\" | \"max\" | \"fake\"; \
     expression  : <number> | '(' <operator> <expression>+ ')'; \
     program     : /^/ <operator> <expression>+ /$/ ; \
     ";
