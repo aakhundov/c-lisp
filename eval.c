@@ -66,6 +66,30 @@ static double op_power(double* args, size_t num_args) {
     return result;
 }
 
+static double op_minimum(double* args, size_t num_args) {
+    double result = *args++;
+    for (size_t i = 1; i < num_args; i++) {
+        double other = *args++;
+        if (other < result) {
+            result = other;
+        }
+    }
+
+    return result;
+}
+
+static double op_maximum(double* args, size_t num_args) {
+    double result = *args++;
+    for (size_t i = 1; i < num_args; i++) {
+        double other = *args++;
+        if (other > result) {
+            result = other;
+        }
+    }
+
+    return result;
+}
+
 static op_fn get_op_fn(char* op) {
     if (strcmp(op, "+") == 0 || strcmp(op, "add") == 0) {
         return op_add;
@@ -79,6 +103,10 @@ static op_fn get_op_fn(char* op) {
         return op_modulo;
     } else if (strcmp(op, "^") == 0 || strcmp(op, "pow") == 0) {
         return op_power;
+    } else if (strcmp(op, "min") == 0) {
+        return op_minimum;
+    } else if (strcmp(op, "max") == 0) {
+        return op_maximum;
     } else {
         // default
         return op_add;
