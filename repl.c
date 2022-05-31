@@ -7,6 +7,7 @@
 #include "edit.h"
 #include "eval.h"
 #include "parse.h"
+#include "value.h"
 
 static const char* exit_commands[] = {"exit", "quit", "q"};
 static const size_t n_exit_commands = sizeof(exit_commands) / sizeof(char*);
@@ -26,6 +27,8 @@ void run_repl(parser* p) {
     puts("Type \"quit\" to quit\n");
 
     int stop = 0;
+    char output[2048];
+
     while (!stop) {
         char* input = readline("clisp> ");
 
@@ -37,7 +40,11 @@ void run_repl(parser* p) {
             result r;
             if (parser_parse(p, input, &r)) {
                 tree t = result_get_tree(&r);
-                printf("%g\n", evaluate(&t));
+                value v = evaluate(&t);
+
+                value_to_str(&v, output);
+                printf("%s\n", output);
+
                 result_dispose_tree(&r);
             } else {
                 result_print_error(&r);

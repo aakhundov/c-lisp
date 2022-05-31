@@ -5,89 +5,93 @@
 #include <string.h>
 
 #include "parse.h"
+#include "value.h"
 
-typedef double (*op_fn)(double*, size_t);
+typedef value (*op_fn)(value*, size_t);
 
-static double op_add(double* args, size_t num_args) {
-    double result = *args++;
+static value op_add(value* args, size_t num_args) {
+    double result = (*args++).number;
     for (size_t i = 1; i < num_args; i++) {
-        result += *args++;
+        result += (*args++).number;
     }
 
-    return result;
+    return value_new_number(result);
 }
 
-static double op_subtract(double* args, size_t num_args) {
+static value op_subtract(value* args, size_t num_args) {
     if (num_args == 1) {
-        return -(*args);
+        return value_new_number(-(*args).number);
     }
 
-    double result = *args++;
+    double result = (*args++).number;
     for (size_t i = 1; i < num_args; i++) {
-        result -= *args++;
+        result -= (*args++).number;
     }
 
-    return result;
+    return value_new_number(result);
 }
 
-static double op_multiply(double* args, size_t num_args) {
-    double result = *args++;
+static value op_multiply(value* args, size_t num_args) {
+    double result = (*args++).number;
     for (size_t i = 1; i < num_args; i++) {
-        result *= *args++;
+        result *= (*args++).number;
     }
 
-    return result;
+    return value_new_number(result);
 }
 
-static double op_divide(double* args, size_t num_args) {
-    double result = *args++;
+static value op_divide(value* args, size_t num_args) {
+    double result = (*args++).number;
     for (size_t i = 1; i < num_args; i++) {
-        result /= *args++;
+        if ((*args).number == 0) {
+            return value_new_error(ERROR_DIV_ZERO, NULL);
+        }
+        result /= (*args++).number;
     }
 
-    return result;
+    return value_new_number(result);
 }
 
-static double op_modulo(double* args, size_t num_args) {
-    int result = (int)(*args++);
+static value op_modulo(value* args, size_t num_args) {
+    int result = (int)(*args++).number;
     for (size_t i = 1; i < num_args; i++) {
-        result %= (int)(*args++);
+        result %= (int)(*args++).number;
     }
 
-    return result;
+    return value_new_number(result);
 }
 
-static double op_power(double* args, size_t num_args) {
-    double result = *args++;
+static value op_power(value* args, size_t num_args) {
+    double result = (*args++).number;
     for (size_t i = 1; i < num_args; i++) {
-        result = pow(result, *args++);
+        result = pow(result, (*args++).number);
     }
 
-    return result;
+    return value_new_number(result);
 }
 
-static double op_minimum(double* args, size_t num_args) {
-    double result = *args++;
+static value op_minimum(value* args, size_t num_args) {
+    double result = (*args++).number;
     for (size_t i = 1; i < num_args; i++) {
-        double other = *args++;
+        double other = (*args++).number;
         if (other < result) {
             result = other;
         }
     }
 
-    return result;
+    return value_new_number(result);
 }
 
-static double op_maximum(double* args, size_t num_args) {
-    double result = *args++;
+static value op_maximum(value* args, size_t num_args) {
+    double result = (*args++).number;
     for (size_t i = 1; i < num_args; i++) {
-        double other = *args++;
+        double other = (*args++).number;
         if (other > result) {
             result = other;
         }
     }
 
-    return result;
+    return value_new_number(result);
 }
 
 static op_fn get_op_fn(char* op) {
@@ -108,27 +112,47 @@ static op_fn get_op_fn(char* op) {
     } else if (strcmp(op, "max") == 0) {
         return op_maximum;
     } else {
-        // default
-        return op_add;
+        return NULL;
     }
 }
 
-double evaluate(tree* t) {
+value evaluate(tree* t) {
     if (strstr(t->tag, "number")) {
-        return atof(t->content);
+        errno = 0;
+        double result = strtod(t->content, NULL);
+
+        if (errno == 0) {
+            return value_new_number(result);
+        } else {
+            return value_new_error(ERROR_BAD_NUMBER, t->content);
+        }
     } else {
         size_t num_args = t->num_children - 3;
-        double* args = malloc(num_args * sizeof(double));
+        value* args = malloc(num_args * sizeof(value));
 
-        double* arg = args;
+        value* arg = args;
         for (size_t i = 0; i < num_args; i++) {
             tree child = tree_get_child(t, 2 + i);
-            *arg++ = evaluate(&child);
+            value v = evaluate(&child);
+
+            if (v.type == VALUE_ERROR) {
+                free(args);
+                return v;
+            }
+
+            *arg++ = v;
         }
 
         tree op = tree_get_child(t, 1);
         op_fn fn = get_op_fn(op.content);
-        double result = fn(args, num_args);
+
+        value result;
+        if (fn != NULL) {
+            result = fn(args, num_args);
+        } else {
+            result = value_new_error(ERROR_BAD_OP, op.content);
+        }
+
         free(args);
 
         return result;

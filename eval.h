@@ -2,7 +2,8 @@
 #define EVAL_H_
 
 #include "parse.h"
+#include "value.h"
 
-double evaluate(tree *t);
+value evaluate(tree *t);
 
 #endif  // EVAL_H_
