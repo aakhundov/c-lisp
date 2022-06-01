@@ -12,6 +12,8 @@ static value get_value(parser* p, char* input) {
     tree t = result_get_tree(&r);
     value v = evaluate(&t);
 
+    result_dispose_tree(&r);
+
     char output[128];
     value_to_str(&v, output);
     printf("%s  ==>  %s\n", input, output);
