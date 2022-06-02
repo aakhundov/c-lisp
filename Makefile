@@ -1,15 +1,17 @@
 CC=gcc
-CFLAGS=-c -std=c99 -Wall -Werror -fpic -g
+CFLAGS=-c -std=c99 -Wall -Werror -fPIC -g
 LDFLAGS=-g
 LDLIBS=-ledit -lm
-OUTPUT_DIR=bin
 
-APP=$(OUTPUT_DIR)/clisp
+SRC_DIR=src
+BIN_DIR=bin
+
+APP=$(BIN_DIR)/clisp
 LIB=$(APP).so
-SOURCES=$(wildcard *.c)
-OBJECTS=$(SOURCES:%.c=$(OUTPUT_DIR)/%.o)
-DRIVER_SOURCE=main.c
-DRIVER_OBJECT=$(OUTPUT_DIR)/main.o
+SOURCES=$(wildcard $(SRC_DIR)/*.c)
+OBJECTS=$(SOURCES:$(SRC_DIR)/%.c=$(BIN_DIR)/%.o)
+DRIVER_SOURCE=$(SRC_DIR)/main.c
+DRIVER_OBJECT=$(BIN_DIR)/main.o
 LIB_SOURCES=$(filter-out $(DRIVER_SOURCE), $(SOURCES))
 LIB_OBJECTS=$(filter-out $(DRIVER_OBJECT), $(OBJECTS))
 
@@ -22,12 +24,12 @@ $(DRIVER_OBJECT): $(LIB_OBJECTS)
 $(LIB): $(LIB_OBJECTS)
 	$(CC) -shared $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-$(LIB_OBJECTS): $(OUTPUT_DIR)/%.o: %.c
+$(LIB_OBJECTS): $(BIN_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -rf $(OUTPUT_DIR)
+	rm -rf $(BIN_DIR)
 
 .PHONY: clean
 
-$(shell mkdir -p $(OUTPUT_DIR))
+$(shell mkdir -p $(BIN_DIR))
