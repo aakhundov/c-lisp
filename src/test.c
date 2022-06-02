@@ -144,6 +144,7 @@ void run_test(parser* p) {
     test_str(p, "tail {+}", "{}");
     test_str(p, "tail {+ 1}", "{1}");
     test_str(p, "tail {1 + 2 -}", "{+ 2 -}");
+    test_str(p, "tail {tail tail tail}", "{tail tail}");
     test_error(p, "tail 2", "arg #0 (2) must be of type q-expr");
     test_error(p, "tail {}", "arg #0 ({}) must be at least 1-long");
     test_error(p, "tail {1} {2} {3}", "expects 1 args");
@@ -165,6 +166,9 @@ void run_test(parser* p) {
     test_str(p, "eval {list {1 2 3}}", "{{1 2 3}}");
     test_str(p, "eval {list 1 2 3} ", "{1 2 3}");
     test_str(p, "eval {eval {list + 2 3}}", "{+ 2 3}");
+    test_str(p, "eval {head (list 1 2 3 4)}", "{1}");
+    test_str(p, "eval (tail {tail tail {5 6 7}})", "{6 7}");
+    test_number(p, "eval (head {(+ 1 2) (+ 10 20)})", 3);
     test_number(p, "eval (eval {list + 2 3})", 5);
     test_error(p, "eval {1} {2}", "expects 1 args");
     test_error(p, "eval 3.14", "arg #0 (3.14) must be of type q-expr");
