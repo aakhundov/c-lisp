@@ -6,11 +6,18 @@
 
 #include "value.h"
 
+static const char* value_type_names[] = {
+    "number",
+    "error",
+    "symbol",
+    "s-expr",
+    "q-expr"};
+
 #define ASSERT_NUM_ARGS(op, num_args, expected_num_args) \
     {                                                    \
         if (num_args != expected) {                      \
             return value_new_error(                      \
-                "'%s' expects %d args",                  \
+                "operator %s expects %d args",           \
                 op, expected_num_args);                  \
         }                                                \
     }
@@ -19,7 +26,7 @@
     {                                                   \
         if (num_args < min_num_args) {                  \
             return value_new_error(                     \
-                "'%s' expects at least %d args",        \
+                "operator %s expects at least %d args", \
                 op, min_num_args);                      \
         }                                               \
     }
@@ -27,9 +34,13 @@
 #define ASSERT_ARG_TYPE(op, arg, expected_type, ordinal) \
     {                                                    \
         if (arg->type != expected_type) {                \
+            char buffer[1024];                           \
+            value_to_str(arg, buffer);                   \
             return value_new_error(                      \
-                "'%s': wrong type of arg #%d",           \
-                op, ordinal);                            \
+                "operator %s: arg #%d (%s) "             \
+                "must be of type %s",                    \
+                op, ordinal, buffer,                     \
+                value_type_names[expected_type]);        \
         }                                                \
     }
 
@@ -40,22 +51,28 @@
         }                                                            \
     }
 
-#define ASSERT_ARG_LEN(op, arg, len, ordinal)    \
-    {                                            \
-        if (arg->num_children != len) {          \
-            return value_new_error(              \
-                "'%s': arg #%d must be %d-long", \
-                op, ordinal, len);               \
-        }                                        \
+#define ASSERT_ARG_LEN(op, arg, len, ordinal) \
+    {                                         \
+        if (arg->num_children != len) {       \
+            char buffer[1024];                \
+            value_to_str(arg, buffer);        \
+            return value_new_error(           \
+                "operator %s: arg #%d (%s) "  \
+                "must be %d-long",            \
+                op, ordinal, buffer, len);    \
+        }                                     \
     }
 
-#define ASSERT_MIN_ARG_LEN(op, arg, min_len, ordinal)     \
-    {                                                     \
-        if (arg->num_children < min_len) {                \
-            return value_new_error(                       \
-                "'%s': arg #%d must be at least %d-long", \
-                op, ordinal, min_len);                    \
-        }                                                 \
+#define ASSERT_MIN_ARG_LEN(op, arg, min_len, ordinal) \
+    {                                                 \
+        if (arg->num_children < min_len) {            \
+            char buffer[1024];                        \
+            value_to_str(arg, buffer);                \
+            return value_new_error(                   \
+                "operator %s: arg #%d (%s) "          \
+                "must be at least %d-long",           \
+                op, ordinal, buffer, len);            \
+        }                                             \
     }
 
 typedef value* (*op_fn)(value**, size_t, char* op);
@@ -222,12 +239,12 @@ value* value_evaluate(value* v) {
 
             if (op_value->type != VALUE_SYMBOL) {
                 value_to_str(v, buffer);
-                result = value_new_error("s-expr doesn't start with a symbol: '%s'", buffer);
+                result = value_new_error("s-expr %s does not start with a symbol", buffer);
             } else {
                 op_fn op = get_op_fn(op_value->symbol);
 
                 if (op == NULL) {
-                    result = value_new_error("unrecognizer operator: '%s'", op_value->symbol);
+                    result = value_new_error("unrecognizer operator: %s", op_value->symbol);
                 } else {
                     result = op(temp->children + 1, temp->num_children - 1, op_value->symbol);
                 }

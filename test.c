@@ -95,12 +95,12 @@ void run_test(parser* p) {
     test_error(p, "/ 1 0", "division by zero");
     test_error(p, "+ 1 (/ 2 0) 3", "division by zero");
     test_error(p, "fake 1 2 3", "unrecognizer operator");
-    test_error(p, "1 2 3", "s-expr doesn't start with");
+    test_error(p, "1 2 3", "does not start with a symbol");
     test_error(p, "1 2 3", "(1 2 3)");
-    test_error(p, "(1 2 3)", "s-expr doesn't start with");
+    test_error(p, "(1 2 3)", "does not start with a symbol");
     test_error(p, "(1 2 3)", "(1 2 3)");
-    test_error(p, "+ 1 2 3 -", "non-numeric argument: '-'");
-    test_error(p, "+ 1 2 3 {4 5}", "non-numeric argument: '{4 5}'");
+    test_error(p, "+ 1 2 3 -", "arg #3 (-) must be of type number");
+    test_error(p, "+ 1 2 3 {4 5}", "arg #3 ({4 5}) must be of type number");
     printf("\n");
 
     test_str(p, "", "()");
