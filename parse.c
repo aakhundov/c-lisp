@@ -4,12 +4,15 @@
 
 static const char* GRAMMAR =
     "\
-    number      : /[+-]?[0-9]*\\.[0-9]+/ | /[+-]?[0-9]+\\.[0-9]*/ | /[+-]?[0-9]+/ ; \
-    operator    : '+' | '-' | '*' | '/' | '%' | '^' | \
-                  \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \"pow\" | \
-                  \"min\" | \"max\" | \"fake\"; \
-    expression  : <number> | '(' <operator> <expression>+ ')'; \
-    program     : /^/ <operator> <expression>+ /$/ ; \
+    number         : /[+-]?[0-9]*\\.[0-9]*/ | \
+                     /[+-]?[0-9]+\\.[0-9]*/ | \
+                     /[+-]?[0-9]+/ ; \
+    symbol         : '+' | '-' | '*' | '/' | '%' | '^' | \
+                     \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \
+                     \"pow\" | \"min\" | \"max\" | \"fake\" ; \
+    sexpr          : '(' <expr>* ')' ; \
+    expr           : <number> | <symbol> | <sexpr> ; \
+    program        : /^/ <expr>* /$/ ; \
     ";
 
 static tree wrap_mpc_tree(mpc_ast_t* ast) {
@@ -25,15 +28,16 @@ static tree wrap_mpc_tree(mpc_ast_t* ast) {
 
 void parser_init(parser* p) {
     p->num = mpc_new("number");
-    p->op = mpc_new("operator");
-    p->expr = mpc_new("expression");
+    p->sym = mpc_new("symbol");
+    p->sexpr = mpc_new("sexpr");
+    p->expr = mpc_new("expr");
     p->prog = mpc_new("program");
 
-    mpca_lang(MPCA_LANG_DEFAULT, GRAMMAR, p->num, p->op, p->expr, p->prog);
+    mpca_lang(MPCA_LANG_DEFAULT, GRAMMAR, p->num, p->sym, p->sexpr, p->expr, p->prog);
 }
 
 void parser_dispose(parser* p) {
-    mpc_cleanup(4, p->num, p->op, p->expr, p->prog);
+    mpc_cleanup(5, p->num, p->sym, p->sexpr, p->expr, p->prog);
 }
 
 int parser_parse(parser* p, char* input, result* r) {

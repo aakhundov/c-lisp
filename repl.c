@@ -23,8 +23,8 @@ static int is_exit_command(char* line) {
 }
 
 void run_repl(parser* p) {
-    puts("CLisp version 0.0.1");
-    puts("Type \"quit\" to quit\n");
+    puts("clisp version 0.0.1");
+    puts("enter \"quit\" to quit\n");
 
     int stop = 0;
     char output[2048];
@@ -40,11 +40,14 @@ void run_repl(parser* p) {
             result r;
             if (parser_parse(p, input, &r)) {
                 tree t = result_get_tree(&r);
-                value v = evaluate(&t);
+                value* v = value_from_tree(&t);
+                value* e = value_evaluate(v);
 
-                value_to_str(&v, output);
+                value_to_str(e, output);
                 printf("%s\n", output);
 
+                value_dispose(e);
+                value_dispose(v);
                 result_dispose_tree(&r);
             } else {
                 result_print_error(&r);
@@ -55,5 +58,5 @@ void run_repl(parser* p) {
         free(input);
     }
 
-    printf("\nBye!\n");
+    printf("\nbye!\n");
 }
