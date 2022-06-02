@@ -6,9 +6,64 @@
 
 #include "value.h"
 
-typedef value* (*op_fn)(value**, size_t);
+#define ASSERT_NUM_ARGS(op, num_args, expected_num_args) \
+    {                                                    \
+        if (num_args != expected) {                      \
+            return value_new_error(                      \
+                "'%s' expects %d args",                  \
+                op, expected_num_args);                  \
+        }                                                \
+    }
 
-static value* op_add(value** args, size_t num_args) {
+#define ASSERT_MIN_NUM_ARGS(op, num_args, min_num_args) \
+    {                                                   \
+        if (num_args < min_num_args) {                  \
+            return value_new_error(                     \
+                "'%s' expects at least %d args",        \
+                op, min_num_args);                      \
+        }                                               \
+    }
+
+#define ASSERT_ARG_TYPE(op, arg, expected_type, ordinal) \
+    {                                                    \
+        if (arg->type != expected_type) {                \
+            return value_new_error(                      \
+                "'%s': wrong type of arg #%d",           \
+                op, ordinal);                            \
+        }                                                \
+    }
+
+#define ASSERT_ARGS_TYPE(op, args, expected_type, num_args, offset)  \
+    {                                                                \
+        for (size_t i = 0; i < num_args; i++) {                      \
+            ASSERT_ARG_TYPE(op, args[i], expected_type, offset + i); \
+        }                                                            \
+    }
+
+#define ASSERT_ARG_LEN(op, arg, len, ordinal)    \
+    {                                            \
+        if (arg->num_children != len) {          \
+            return value_new_error(              \
+                "'%s': arg #%d must be %d-long", \
+                op, ordinal, len);               \
+        }                                        \
+    }
+
+#define ASSERT_MIN_ARG_LEN(op, arg, min_len, ordinal)     \
+    {                                                     \
+        if (arg->num_children < min_len) {                \
+            return value_new_error(                       \
+                "'%s': arg #%d must be at least %d-long", \
+                op, ordinal, min_len);                    \
+        }                                                 \
+    }
+
+typedef value* (*op_fn)(value**, size_t, char* op);
+
+static value* op_add(value** args, size_t num_args, char* op) {
+    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
+    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+
     double result = (*args++)->number;
     for (size_t i = 1; i < num_args; i++) {
         result += (*args++)->number;
@@ -17,7 +72,10 @@ static value* op_add(value** args, size_t num_args) {
     return value_new_number(result);
 }
 
-static value* op_subtract(value** args, size_t num_args) {
+static value* op_subtract(value** args, size_t num_args, char* op) {
+    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
+    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+
     if (num_args == 1) {
         return value_new_number(-(*args)->number);
     }
@@ -30,7 +88,10 @@ static value* op_subtract(value** args, size_t num_args) {
     return value_new_number(result);
 }
 
-static value* op_multiply(value** args, size_t num_args) {
+static value* op_multiply(value** args, size_t num_args, char* op) {
+    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
+    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+
     double result = (*args++)->number;
     for (size_t i = 1; i < num_args; i++) {
         result *= (*args++)->number;
@@ -39,7 +100,10 @@ static value* op_multiply(value** args, size_t num_args) {
     return value_new_number(result);
 }
 
-static value* op_divide(value** args, size_t num_args) {
+static value* op_divide(value** args, size_t num_args, char* op) {
+    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
+    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+
     double result = (*args++)->number;
     for (size_t i = 1; i < num_args; i++) {
         if ((*args)->number == 0) {
@@ -51,7 +115,10 @@ static value* op_divide(value** args, size_t num_args) {
     return value_new_number(result);
 }
 
-static value* op_modulo(value** args, size_t num_args) {
+static value* op_modulo(value** args, size_t num_args, char* op) {
+    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
+    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+
     int result = (int)(*args++)->number;
     for (size_t i = 1; i < num_args; i++) {
         result %= (int)(*args++)->number;
@@ -60,7 +127,10 @@ static value* op_modulo(value** args, size_t num_args) {
     return value_new_number(result);
 }
 
-static value* op_power(value** args, size_t num_args) {
+static value* op_power(value** args, size_t num_args, char* op) {
+    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
+    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+
     double result = (*args++)->number;
     for (size_t i = 1; i < num_args; i++) {
         result = pow(result, (*args++)->number);
@@ -69,7 +139,10 @@ static value* op_power(value** args, size_t num_args) {
     return value_new_number(result);
 }
 
-static value* op_minimum(value** args, size_t num_args) {
+static value* op_minimum(value** args, size_t num_args, char* op) {
+    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
+    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+
     double result = (*args++)->number;
     for (size_t i = 1; i < num_args; i++) {
         double other = (*args++)->number;
@@ -81,7 +154,10 @@ static value* op_minimum(value** args, size_t num_args) {
     return value_new_number(result);
 }
 
-static value* op_maximum(value** args, size_t num_args) {
+static value* op_maximum(value** args, size_t num_args, char* op) {
+    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
+    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+
     double result = (*args++)->number;
     for (size_t i = 1; i < num_args; i++) {
         double other = (*args++)->number;
@@ -153,17 +229,7 @@ value* value_evaluate(value* v) {
                 if (op == NULL) {
                     result = value_new_error("unrecognizer operator: '%s'", op_value->symbol);
                 } else {
-                    for (size_t i = 1; i < temp->num_children; i++) {
-                        if (temp->children[i]->type != VALUE_NUMBER) {
-                            value_to_str(temp->children[i], buffer);
-                            result = value_new_error("non-numeric argument: '%s'", buffer);
-                            break;
-                        }
-                    }
-
-                    if (result == NULL) {
-                        result = op(temp->children + 1, temp->num_children - 1);
-                    }
+                    result = op(temp->children + 1, temp->num_children - 1, op_value->symbol);
                 }
             }
         }
