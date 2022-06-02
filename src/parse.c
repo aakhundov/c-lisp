@@ -8,8 +8,8 @@ static const char* GRAMMAR =
                      /[+-]?[0-9]+\\.[0-9]*/ | \
                      /[+-]?[0-9]+/ ; \
     symbol         : '+' | '-' | '*' | '/' | '%' | '^' | \
-                     \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \"pow\" | \
-                     \"min\" | \"max\" | \"fake\" | \
+                     \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \
+                     \"pow\" | \"min\" | \"max\" | \"fake\" | \
                      \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" ; \
     sexpr          : '(' <expr>* ')' ; \
     qexpr          : '{' <expr>* '}' ; \
