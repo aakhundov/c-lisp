@@ -41,15 +41,23 @@ value* value_new_symbol(char* symbol) {
     return v;
 }
 
-value* value_new_sexpr() {
+static value* value_new_expr(value_type type) {
     value* v = malloc(sizeof(value));
 
-    v->type = VALUE_SEXPR;
+    v->type = type;
     v->num_children = 0;
     v->capacity = 4;
     v->children = malloc(v->capacity * sizeof(value*));
 
     return v;
+}
+
+value* value_new_sexpr() {
+    return value_new_expr(VALUE_SEXPR);
+}
+
+value* value_new_qexpr() {
+    return value_new_expr(VALUE_QEXPR);
 }
 
 void value_dispose(value* v) {
@@ -63,12 +71,14 @@ void value_dispose(value* v) {
             free(v->symbol);
             break;
         case VALUE_SEXPR:
+        case VALUE_QEXPR:
             for (size_t i = 0; i < v->num_children; i++) {
                 if (v->children[i] != NULL) {
                     value_dispose(v->children[i]);
                 }
             }
             free(v->children);
+            break;
     }
 
     free(v);
@@ -99,21 +109,28 @@ value* value_from_tree(tree* t) {
     } else if (strstr(t->tag, "symbol")) {
         return value_new_symbol(t->content);
     } else {
-        value* sexpr = value_new_sexpr();
+        value* expr = NULL;
+        if (strcmp(t->tag, ">") == 0 || strstr(t->tag, "sexpr")) {
+            expr = value_new_sexpr();
+        } else if (strstr(t->tag, "qexpr")) {
+            expr = value_new_qexpr();
+        }
 
         for (size_t i = 0; i < t->num_children; i++) {
             tree child = tree_get_child(t, i);
 
             if (strcmp(child.content, "(") == 0 ||
                 strcmp(child.content, ")") == 0 ||
+                strcmp(child.content, "{") == 0 ||
+                strcmp(child.content, "}") == 0 ||
                 strcmp(child.tag, "regex") == 0) {
                 continue;
             }
 
-            value_add_child(sexpr, value_from_tree(&child));
+            value_add_child(expr, value_from_tree(&child));
         }
 
-        return sexpr;
+        return expr;
     }
 }
 
@@ -131,7 +148,8 @@ value* value_copy(value* v) {
             result = value_new_symbol(v->symbol);
             break;
         case VALUE_SEXPR:
-            result = value_new_sexpr();
+        case VALUE_QEXPR:
+            result = value_new_expr(v->type);
             for (size_t i = 0; i < v->num_children; i++) {
                 value_add_child(result, value_copy(v->children[i]));
             }
@@ -169,6 +187,8 @@ int value_to_str(value* v, char* buffer) {
             return sprintf(buffer, "%s", v->symbol);
         case VALUE_SEXPR:
             return expr_to_str(v, buffer, '(', ')');
+        case VALUE_QEXPR:
+            return expr_to_str(v, buffer, '{', '}');
         default:
             return sprintf(buffer, "unknown value type: %d", v->type);
     }

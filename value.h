@@ -7,7 +7,8 @@ typedef enum {
     VALUE_NUMBER = 0,
     VALUE_ERROR = 1,
     VALUE_SYMBOL = 2,
-    VALUE_SEXPR = 3
+    VALUE_SEXPR = 3,
+    VALUE_QEXPR = 4
 } value_type;
 
 typedef struct value value;
@@ -26,6 +27,7 @@ value* value_new_number(double number);
 value* value_new_error(char* error, ...);
 value* value_new_symbol(char* symbol);
 value* value_new_sexpr();
+value* value_new_qexpr();
 
 value* value_from_tree(tree* t);
 value* value_copy(value* v);

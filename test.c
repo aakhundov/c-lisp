@@ -70,6 +70,7 @@ void run_test(parser* p) {
     test_number(p, "- -1", 1);
     test_number(p, "- 1 2 3", -4);
     test_number(p, "+ 1 (- 2 3) 4", 4);
+    test_number(p, " +   1 (-  2    3)    4 ", 4);
     test_number(p, "* 3.14 -2.71", -8.5094);
     test_number(p, "* 1 2 3 4 5", 120);
     test_number(p, "/ 1 2", 0.5);
@@ -88,6 +89,7 @@ void run_test(parser* p) {
     test_number(p, "min (max 1 3 5) (max 2 4 6)", 5);
     test_number(p, "5", 5);
     test_number(p, "(5)", 5);
+    test_number(p, "(+ 1 2 3 (- 4 5) 6)", 11);
     printf("\n");
 
     test_error(p, "/ 1 0", "division by zero");
@@ -98,12 +100,21 @@ void run_test(parser* p) {
     test_error(p, "(1 2 3)", "s-expr doesn't start with");
     test_error(p, "(1 2 3)", "(1 2 3)");
     test_error(p, "+ 1 2 3 -", "non-numeric argument: '-'");
+    test_error(p, "+ 1 2 3 {4 5}", "non-numeric argument: '{4 5}'");
     printf("\n");
 
     test_str(p, "", "()");
+    test_str(p, "  ", "()");
     test_str(p, "+", "+");
     test_str(p, "min", "min");
     test_str(p, "fake", "fake");
     test_str(p, "-5", "-5");
     test_str(p, "(-3.14)", "-3.14");
+    test_str(p, "{}", "{}");
+    test_str(p, "{1}", "{1}");
+    test_str(p, "{1 2 3}", "{1 2 3}");
+    test_str(p, "{+ 1 2 3}", "{+ 1 2 3}");
+    test_str(p, "{1 2 3 +}", "{1 2 3 +}");
+    test_str(p, "{+ 1 2 3 {- 4 5} 6}", "{+ 1 2 3 {- 4 5} 6}");
+    test_str(p, "{+ 1 2 3 (- 4 5) 6}", "{+ 1 2 3 (- 4 5) 6}");
 }

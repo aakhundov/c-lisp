@@ -16,10 +16,13 @@ LIB_OBJECTS=$(filter-out $(DRIVER_OBJECT), $(OBJECTS))
 $(APP): $(DRIVER_OBJECT) $(LIB)
 	$(CC) $(LDFLAGS) $(LDLIBS) $^ -o $@
 
+$(DRIVER_OBJECT): $(LIB_OBJECTS)
+	$(CC) $(CFLAGS) $(DRIVER_SOURCE) -o $@
+
 $(LIB): $(LIB_OBJECTS)
 	$(CC) -shared $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-$(OBJECTS): $(OUTPUT_DIR)/%.o: %.c
+$(LIB_OBJECTS): $(OUTPUT_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:

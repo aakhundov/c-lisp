@@ -8,10 +8,12 @@ static const char* GRAMMAR =
                      /[+-]?[0-9]+\\.[0-9]*/ | \
                      /[+-]?[0-9]+/ ; \
     symbol         : '+' | '-' | '*' | '/' | '%' | '^' | \
-                     \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \
-                     \"pow\" | \"min\" | \"max\" | \"fake\" ; \
+                     \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \"pow\" | \
+                     \"min\" | \"max\" | \"fake\" | \
+                     \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" ; \
     sexpr          : '(' <expr>* ')' ; \
-    expr           : <number> | <symbol> | <sexpr> ; \
+    qexpr          : '{' <expr>* '}' ; \
+    expr           : <number> | <symbol> | <sexpr> | <qexpr> ; \
     program        : /^/ <expr>* /$/ ; \
     ";
 
@@ -30,14 +32,15 @@ void parser_init(parser* p) {
     p->num = mpc_new("number");
     p->sym = mpc_new("symbol");
     p->sexpr = mpc_new("sexpr");
+    p->qexpr = mpc_new("qexpr");
     p->expr = mpc_new("expr");
     p->prog = mpc_new("program");
 
-    mpca_lang(MPCA_LANG_DEFAULT, GRAMMAR, p->num, p->sym, p->sexpr, p->expr, p->prog);
+    mpca_lang(MPCA_LANG_DEFAULT, GRAMMAR, p->num, p->sym, p->sexpr, p->qexpr, p->expr, p->prog);
 }
 
 void parser_dispose(parser* p) {
-    mpc_cleanup(5, p->num, p->sym, p->sexpr, p->expr, p->prog);
+    mpc_cleanup(6, p->num, p->sym, p->sexpr, p->qexpr, p->expr, p->prog);
 }
 
 int parser_parse(parser* p, char* input, result* r) {
