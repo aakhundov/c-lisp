@@ -10,7 +10,8 @@ static const char* GRAMMAR =
     symbol         : '+' | '-' | '*' | '/' | '%' | '^' | \
                      \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \
                      \"pow\" | \"min\" | \"max\" | \"fake\" | \
-                     \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" ; \
+                     \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | \
+                     \"cons\" | \"len\" | \"init\" ; \
     sexpr          : '(' <expr>* ')' ; \
     qexpr          : '{' <expr>* '}' ; \
     expr           : <number> | <symbol> | <sexpr> | <qexpr> ; \

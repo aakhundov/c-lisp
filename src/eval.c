@@ -17,18 +17,20 @@ static const char* value_type_names[] = {
     {                                                    \
         if (num_args != expected_num_args) {             \
             return value_new_error(                      \
-                "operator %s expects %d args",           \
-                op, expected_num_args);                  \
+                "operator %s expects exactly %d arg%s",  \
+                op, expected_num_args,                   \
+                (expected_num_args == 1 ? "" : "s"));    \
         }                                                \
     }
 
-#define ASSERT_MIN_NUM_ARGS(op, num_args, min_num_args) \
-    {                                                   \
-        if (num_args < min_num_args) {                  \
-            return value_new_error(                     \
-                "operator %s expects at least %d args", \
-                op, min_num_args);                      \
-        }                                               \
+#define ASSERT_MIN_NUM_ARGS(op, num_args, min_num_args)  \
+    {                                                    \
+        if (num_args < min_num_args) {                   \
+            return value_new_error(                      \
+                "operator %s expects at least %d arg%s", \
+                op, min_num_args,                        \
+                (min_num_args == 1 ? "" : "s"));         \
+        }                                                \
     }
 
 #define ASSERT_ARG_TYPE(op, arg, expected_type, ordinal) \
@@ -239,10 +241,43 @@ static value* op_eval(value** args, size_t num_args, char* op) {
     ASSERT_NUM_ARGS(op, num_args, 1);
     ASSERT_ARG_TYPE(op, args[0], VALUE_QEXPR, 0);
 
-    value* sexpr = value_copy(args[0]);
-    sexpr->type = VALUE_SEXPR;
-    value* result = value_evaluate(sexpr);
-    value_dispose(sexpr);
+    value* temp = value_copy(args[0]);
+    temp->type = VALUE_SEXPR;
+    value* result = value_evaluate(temp);
+    value_dispose(temp);
+
+    return result;
+}
+
+static value* op_cons(value** args, size_t num_args, char* op) {
+    ASSERT_NUM_ARGS(op, num_args, 2);
+    ASSERT_ARG_TYPE(op, args[1], VALUE_QEXPR, 1);
+
+    value* result = value_new_qexpr();
+    value_add_child(result, value_copy(args[0]));
+    for (size_t i = 0; i < args[1]->num_children; i++) {
+        value_add_child(result, value_copy(args[1]->children[i]));
+    }
+
+    return result;
+}
+
+static value* op_len(value** args, size_t num_args, char* op) {
+    ASSERT_NUM_ARGS(op, num_args, 1);
+    ASSERT_ARG_TYPE(op, args[0], VALUE_QEXPR, 0);
+
+    return value_new_number(args[0]->num_children);
+}
+
+static value* op_init(value** args, size_t num_args, char* op) {
+    ASSERT_NUM_ARGS(op, num_args, 1);
+    ASSERT_ARG_TYPE(op, args[0], VALUE_QEXPR, 0);
+    ASSERT_MIN_ARG_LENGTH(op, args[0], 1, 0);
+
+    value* result = value_new_qexpr();
+    for (size_t i = 0; i < args[0]->num_children - 1; i++) {
+        value_add_child(result, value_copy(args[0]->children[i]));
+    }
 
     return result;
 }
@@ -274,6 +309,12 @@ static op_fn get_op_fn(char* op) {
         return op_join;
     } else if (strcmp(op, "eval") == 0) {
         return op_eval;
+    } else if (strcmp(op, "cons") == 0) {
+        return op_cons;
+    } else if (strcmp(op, "len") == 0) {
+        return op_len;
+    } else if (strcmp(op, "init") == 0) {
+        return op_init;
     } else {
         return NULL;
     }

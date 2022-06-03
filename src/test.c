@@ -6,6 +6,8 @@
 #include "parse.h"
 #include "value.h"
 
+static int counter = 0;
+
 static value* get_evaluated(parser* p, char* input) {
     result r;
     char output[128];
@@ -19,7 +21,7 @@ static value* get_evaluated(parser* p, char* input) {
         value_dispose(v);
 
         value_to_str(e, output);
-        printf("\"%s\" --> \"%s\"\n", input, output);
+        printf("%-5d \"%s\" --> \"%s\"\n", ++counter, input, output);
 
         return e;
     } else {
@@ -62,6 +64,8 @@ static void test_str(parser* p, char* input, char* expected) {
 }
 
 void run_test(parser* p) {
+    counter = 0;
+
     test_number(p, "+ 1", 1);
     test_number(p, "+ -1", -1);
     test_number(p, "+ 0", 0);
@@ -136,7 +140,7 @@ void run_test(parser* p) {
     test_str(p, "head {head + + + -}", "{head}");
     test_error(p, "head 1", "arg #0 (1) must be of type q-expr");
     test_error(p, "head {}", "arg #0 ({}) must be at least 1-long");
-    test_error(p, "head 1 2 3", "expects 1 args");
+    test_error(p, "head 1 2 3", "expects exactly 1 arg");
     printf("\n");
 
     test_str(p, "tail {1}", "{}");
@@ -147,7 +151,7 @@ void run_test(parser* p) {
     test_str(p, "tail {tail tail tail}", "{tail tail}");
     test_error(p, "tail 2", "arg #0 (2) must be of type q-expr");
     test_error(p, "tail {}", "arg #0 ({}) must be at least 1-long");
-    test_error(p, "tail {1} {2} {3}", "expects 1 args");
+    test_error(p, "tail {1} {2} {3}", "expects exactly 1 arg");
     printf("\n");
 
     test_str(p, "join {}", "{}");
@@ -170,7 +174,40 @@ void run_test(parser* p) {
     test_str(p, "eval (tail {tail tail {5 6 7}})", "{6 7}");
     test_number(p, "eval (head {(+ 1 2) (+ 10 20)})", 3);
     test_number(p, "eval (eval {list + 2 3})", 5);
-    test_error(p, "eval {1} {2}", "expects 1 args");
+    test_error(p, "eval {1} {2}", "expects exactly 1 arg");
     test_error(p, "eval 3.14", "arg #0 (3.14) must be of type q-expr");
+    printf("\n");
+
+    test_str(p, "cons 1 {}", "{1}");
+    test_str(p, "cons 1 {2 3}", "{1 2 3}");
+    test_str(p, "cons {1} {2 3}", "{{1} 2 3}");
+    test_str(p, "cons + {1 2 3}", "{+ 1 2 3}");
+    test_number(p, "eval (cons + {1 2 3})", 6);
+    test_str(p, "cons", "cons");
+    test_str(p, "cons {} {}", "{{}}");
+    test_error(p, "cons 1", "expects exactly 2 args");
+    test_error(p, "cons {}", "expects exactly 2 args");
+    test_error(p, "cons 1 2 3", "expects exactly 2 args");
+    test_error(p, "cons 1 2", "arg #1 (2) must be of type q-expr");
+    test_error(p, "cons {} 2", "arg #1 (2) must be of type q-expr");
+    printf("\n");
+
+    test_number(p, "len {}", 0);
+    test_number(p, "len {1}", 1);
+    test_number(p, "len {1 2 3}", 3);
+    test_number(p, "len {{1} {2 3 4 5}}", 2);
+    test_error(p, "len 1", "arg #0 (1) must be of type q-expr");
+    test_error(p, "len +", "arg #0 (+) must be of type q-expr");
+    test_error(p, "len {} {}", "expects exactly 1 arg");
+    printf("\n");
+
+    test_str(p, "init {1}", "{}");
+    test_str(p, "init {1 2 3}", "{1 2}");
+    test_str(p, "init {{1} {2 3} {4}}", "{{1} {2 3}}");
+    test_str(p, "init {{1} (+ 2 3) {4}}", "{{1} (+ 2 3)}");
+    test_str(p, "init {+ - * /}", "{+ - *}");
+    test_error(p, "init {}", "arg #0 ({}) must be at least 1-long");
+    test_error(p, "init 1", "arg #0 (1) must be of type q-expr");
+    test_error(p, "init {1} {2}", "expects exactly 1 arg");
     printf("\n");
 }
