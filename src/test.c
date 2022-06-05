@@ -7,6 +7,14 @@
 #include "parse.h"
 #include "value.h"
 
+#define RUN_TEST_FN(fn, p, env)           \
+    {                                     \
+        printf("[%s]\n", #fn);            \
+        printf("====================\n"); \
+        fn(p, env);                       \
+        printf("\n");                     \
+    }
+
 static int counter = 0;
 
 static value* get_evaluated(parser* p, environment* env, char* input) {
@@ -93,7 +101,6 @@ static void test_numeric(parser* p, environment* env) {
     test_number_output(p, env, "5", 5);
     test_number_output(p, env, "(5)", 5);
     test_number_output(p, env, "(+ 1 2 3 (- 4 5) 6)", 11);
-    printf("\n");
 }
 
 static void test_errors(parser* p, environment* env) {
@@ -106,7 +113,6 @@ static void test_errors(parser* p, environment* env) {
     test_error_output(p, env, "(1 2 3)", "(1 2 3)");
     test_error_output(p, env, "+ 1 2 3 -", "arg #3 (<function ->) must be of type number");
     test_error_output(p, env, "+ 1 2 3 {4 5}", "arg #3 ({4 5}) must be of type number");
-    printf("\n");
 }
 
 static void test_str(parser* p, environment* env) {
@@ -124,7 +130,6 @@ static void test_str(parser* p, environment* env) {
     test_str_output(p, env, "{1 2 3 +}", "{1 2 3 +}");
     test_str_output(p, env, "{+ 1 2 3 {- 4 5} 6}", "{+ 1 2 3 {- 4 5} 6}");
     test_str_output(p, env, "{+ 1 2 3 (- 4 5) 6}", "{+ 1 2 3 (- 4 5) 6}");
-    printf("\n");
 }
 
 static void test_list(parser* p, environment* env) {
@@ -136,7 +141,6 @@ static void test_list(parser* p, environment* env) {
     test_str_output(p, env, "list list", "{<function list>}");
     test_str_output(p, env, "(list 1 2 3)", "{1 2 3}");
     test_str_output(p, env, "{list 1 2 3}", "{list 1 2 3}");
-    printf("\n");
 }
 
 static void test_head(parser* p, environment* env) {
@@ -149,7 +153,6 @@ static void test_head(parser* p, environment* env) {
     test_error_output(p, env, "head 1", "arg #0 (1) must be of type q-expr");
     test_error_output(p, env, "head {}", "arg #0 ({}) must be at least 1-long");
     test_error_output(p, env, "head 1 2 3", "expects exactly 1 arg");
-    printf("\n");
 }
 
 static void test_tail(parser* p, environment* env) {
@@ -163,7 +166,6 @@ static void test_tail(parser* p, environment* env) {
     test_error_output(p, env, "tail 2", "arg #0 (2) must be of type q-expr");
     test_error_output(p, env, "tail {}", "arg #0 ({}) must be at least 1-long");
     test_error_output(p, env, "tail {1} {2} {3}", "expects exactly 1 arg");
-    printf("\n");
 }
 
 static void test_join(parser* p, environment* env) {
@@ -176,7 +178,6 @@ static void test_join(parser* p, environment* env) {
 
     test_error_output(p, env, "join {1} {2 3} 5 {(4 5) /} {}", "arg #2 (5) must be of type q-expr");
     test_error_output(p, env, "join 1 2 3", "arg #0 (1) must be of type q-expr");
-    printf("\n");
 }
 
 static void test_eval(parser* p, environment* env) {
@@ -193,7 +194,6 @@ static void test_eval(parser* p, environment* env) {
 
     test_error_output(p, env, "eval {1} {2}", "expects exactly 1 arg");
     test_error_output(p, env, "eval 3.14", "arg #0 (3.14) must be of type q-expr");
-    printf("\n");
 }
 
 static void test_cons(parser* p, environment* env) {
@@ -210,7 +210,6 @@ static void test_cons(parser* p, environment* env) {
     test_error_output(p, env, "cons 1 2 3", "expects exactly 2 args");
     test_error_output(p, env, "cons 1 2", "arg #1 (2) must be of type q-expr");
     test_error_output(p, env, "cons {} 2", "arg #1 (2) must be of type q-expr");
-    printf("\n");
 }
 
 static void test_len(parser* p, environment* env) {
@@ -222,7 +221,6 @@ static void test_len(parser* p, environment* env) {
     test_error_output(p, env, "len 1", "arg #0 (1) must be of type q-expr");
     test_error_output(p, env, "len +", "arg #0 (<function +>) must be of type q-expr");
     test_error_output(p, env, "len {} {}", "expects exactly 1 arg");
-    printf("\n");
 }
 
 static void test_init(parser* p, environment* env) {
@@ -235,7 +233,6 @@ static void test_init(parser* p, environment* env) {
     test_error_output(p, env, "init {}", "arg #0 ({}) must be at least 1-long");
     test_error_output(p, env, "init 1", "arg #0 (1) must be of type q-expr");
     test_error_output(p, env, "init {1} {2}", "expects exactly 1 arg");
-    printf("\n");
 }
 
 static void test_def(parser* p, environment* env) {
@@ -265,22 +262,21 @@ static void test_def(parser* p, environment* env) {
     test_error_output(p, env, "def {a b c} 1 2", "expects exactly 4 args");
     test_error_output(p, env, "def {1} 2", "first argument must consist of symbols");
     test_error_output(p, env, "def {a 1} 2 3", "first argument must consist of symbols");
-    printf("\n");
 }
 
 void run_test(parser* p, environment* env) {
     counter = 0;
 
-    test_numeric(p, env);
-    test_errors(p, env);
-    test_str(p, env);
-    test_list(p, env);
-    test_head(p, env);
-    test_tail(p, env);
-    test_join(p, env);
-    test_eval(p, env);
-    test_cons(p, env);
-    test_len(p, env);
-    test_init(p, env);
-    test_def(p, env);
+    RUN_TEST_FN(test_numeric, p, env);
+    RUN_TEST_FN(test_errors, p, env);
+    RUN_TEST_FN(test_str, p, env);
+    RUN_TEST_FN(test_list, p, env);
+    RUN_TEST_FN(test_head, p, env);
+    RUN_TEST_FN(test_tail, p, env);
+    RUN_TEST_FN(test_join, p, env);
+    RUN_TEST_FN(test_eval, p, env);
+    RUN_TEST_FN(test_cons, p, env);
+    RUN_TEST_FN(test_len, p, env);
+    RUN_TEST_FN(test_init, p, env);
+    RUN_TEST_FN(test_def, p, env);
 }
