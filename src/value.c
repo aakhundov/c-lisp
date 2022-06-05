@@ -194,26 +194,28 @@ int value_to_str(value* v, char* buffer) {
     }
 }
 
-int value_compare(value* v1, value* v2) {
+value* value_compare(value* v1, value* v2) {
+    value* result = NULL;
+
     if (v1->type != v2->type) {
-        return v1->type - v2->type;
+        result = value_new_number(v1->type - v2->type);
     } else {
-        int sub_result;
+        value* sub_result;
         size_t min_children;
 
         switch (v1->type) {
             case VALUE_NUMBER:
                 if (v1->number < v2->number) {
-                    return -1;
+                    result = value_new_number(-1);
                 } else if (v1->number > v2->number) {
-                    return 1;
+                    result = value_new_number(1);
                 } else {
-                    return 0;
+                    result = value_new_number(0);
                 }
             case VALUE_SYMBOL:
-                return strcmp(v1->symbol, v2->symbol);
+                result = value_new_number(strcmp(v1->symbol, v2->symbol));
             case VALUE_ERROR:
-                return strcmp(v1->error, v2->error);
+                result = value_new_number(strcmp(v1->error, v2->error));
             case VALUE_SEXPR:
             case VALUE_QEXPR:
                 min_children = v1->num_children;
@@ -222,12 +224,22 @@ int value_compare(value* v1, value* v2) {
                 }
 
                 for (size_t i = 0; i < min_children; i++) {
-                    if ((sub_result = value_compare(v1->children[i], v2->children[i])) != 0) {
-                        return sub_result;
+                    sub_result = value_compare(v1->children[i], v2->children[i]);
+                    if (sub_result->type == VALUE_ERROR || sub_result->number != 0) {
+                        result = sub_result;
+                        break;
+                    } else {
+                        value_dispose(sub_result);
                     }
                 }
 
-                return v1->num_children - v2->num_children;
+                if (result == NULL) {
+                    result = value_new_number(v1->num_children - v2->num_children);
+                }
+            default:
+                result = value_new_error("unknown value type: %d", v1->type);
         }
     }
+
+    return result;
 }

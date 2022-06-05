@@ -29,12 +29,13 @@ value* value_new_symbol(char* symbol);
 value* value_new_sexpr();
 value* value_new_qexpr();
 
+void value_dispose(value* v);
+
 value* value_from_tree(tree* t);
 value* value_copy(value* v);
-void value_dispose(value* v);
+value* value_compare(value* v1, value* v2);
 
 void value_add_child(value* parent, value* child);
 int value_to_str(value* v, char* buffer);
-int value_compare(value* v1, value* v2);
 
 #endif  // VALUE_H_
