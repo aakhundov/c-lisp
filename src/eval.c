@@ -17,20 +17,20 @@ static const char* value_type_names[] = {
     {                                                    \
         if (num_args != expected_num_args) {             \
             return value_new_error(                      \
-                "operator %s expects exactly %d arg%s",  \
+                "%s expects exactly %d arg%s",           \
                 op, expected_num_args,                   \
                 (expected_num_args == 1 ? "" : "s"));    \
         }                                                \
     }
 
-#define ASSERT_MIN_NUM_ARGS(op, num_args, min_num_args)  \
-    {                                                    \
-        if (num_args < min_num_args) {                   \
-            return value_new_error(                      \
-                "operator %s expects at least %d arg%s", \
-                op, min_num_args,                        \
-                (min_num_args == 1 ? "" : "s"));         \
-        }                                                \
+#define ASSERT_MIN_NUM_ARGS(op, num_args, min_num_args) \
+    {                                                   \
+        if (num_args < min_num_args) {                  \
+            return value_new_error(                     \
+                "%s expects at least %d arg%s",         \
+                op, min_num_args,                       \
+                (min_num_args == 1 ? "" : "s"));        \
+        }                                               \
     }
 
 #define ASSERT_ARG_TYPE(op, arg, expected_type, ordinal) \
@@ -39,7 +39,7 @@ static const char* value_type_names[] = {
             char buffer[1024];                           \
             value_to_str(arg, buffer);                   \
             return value_new_error(                      \
-                "operator %s: arg #%d (%s) "             \
+                "%s: arg #%d (%s) "                      \
                 "must be of type %s",                    \
                 op, ordinal, buffer,                     \
                 value_type_names[expected_type]);        \
@@ -59,7 +59,7 @@ static const char* value_type_names[] = {
             char buffer[1024];                      \
             value_to_str(arg, buffer);              \
             return value_new_error(                 \
-                "operator %s: arg #%d (%s) "        \
+                "%s: arg #%d (%s) "                 \
                 "must be %d-long",                  \
                 op, ordinal, buffer, length);       \
         }                                           \
@@ -71,7 +71,7 @@ static const char* value_type_names[] = {
             char buffer[1024];                              \
             value_to_str(arg, buffer);                      \
             return value_new_error(                         \
-                "operator %s: arg #%d (%s) "                \
+                "%s: arg #%d (%s) "                         \
                 "must be at least %d-long",                 \
                 op, ordinal, buffer, min_length);           \
         }                                                   \
@@ -356,7 +356,7 @@ value* value_evaluate(value* v) {
                 op_fn op = get_op_fn(op_value->symbol);
 
                 if (op == NULL) {
-                    result = value_new_error("unrecognizer operator: %s", op_value->symbol);
+                    result = value_new_error("unrecognized symbol: %s", op_value->symbol);
                 } else {
                     result = op(temp->children + 1, temp->num_children - 1, op_value->symbol);
                 }

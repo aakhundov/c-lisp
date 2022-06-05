@@ -28,7 +28,7 @@ static value* get_evaluated(parser* p, char* input) {
         result_print_error(&r);
         result_dispose_error(&r);
 
-        return NULL;
+        exit(1);
     }
 }
 
@@ -98,7 +98,7 @@ static void test_numeric(parser* p) {
 static void test_errors(parser* p) {
     test_error_output(p, "/ 1 0", "division by zero");
     test_error_output(p, "+ 1 (/ 2 0) 3", "division by zero");
-    test_error_output(p, "fake 1 2 3", "unrecognizer operator");
+    test_error_output(p, "fake 1 2 3", "unrecognized symbol");
     test_error_output(p, "1 2 3", "does not start with a symbol");
     test_error_output(p, "1 2 3", "(1 2 3)");
     test_error_output(p, "(1 2 3)", "does not start with a symbol");

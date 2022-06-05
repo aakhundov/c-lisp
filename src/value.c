@@ -193,3 +193,41 @@ int value_to_str(value* v, char* buffer) {
             return sprintf(buffer, "unknown value type: %d", v->type);
     }
 }
+
+int value_compare(value* v1, value* v2) {
+    if (v1->type != v2->type) {
+        return v1->type - v2->type;
+    } else {
+        int sub_result;
+        size_t min_children;
+
+        switch (v1->type) {
+            case VALUE_NUMBER:
+                if (v1->number < v2->number) {
+                    return -1;
+                } else if (v1->number > v2->number) {
+                    return 1;
+                } else {
+                    return 0;
+                }
+            case VALUE_SYMBOL:
+                return strcmp(v1->symbol, v2->symbol);
+            case VALUE_ERROR:
+                return strcmp(v1->error, v2->error);
+            case VALUE_SEXPR:
+            case VALUE_QEXPR:
+                min_children = v1->num_children;
+                if (v2->num_children < v1->num_children) {
+                    min_children = v2->num_children;
+                }
+
+                for (size_t i = 0; i < min_children; i++) {
+                    if ((sub_result = value_compare(v1->children[i], v2->children[i])) != 0) {
+                        return sub_result;
+                    }
+                }
+
+                return v1->num_children - v2->num_children;
+        }
+    }
+}

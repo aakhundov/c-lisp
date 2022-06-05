@@ -1,5 +1,5 @@
 #!/bin/bash
 
-make
-echo
+make && \
+echo && \
 ./bin/clisp test

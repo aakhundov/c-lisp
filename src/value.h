@@ -35,5 +35,6 @@ void value_dispose(value* v);
 
 void value_add_child(value* parent, value* child);
 int value_to_str(value* v, char* buffer);
+int value_compare(value* v1, value* v2);
 
 #endif  // VALUE_H_

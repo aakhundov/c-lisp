@@ -7,11 +7,7 @@ static const char* GRAMMAR =
     number         : /[+-]?[0-9]*\\.[0-9]*/ | \
                      /[+-]?[0-9]+\\.[0-9]*/ | \
                      /[+-]?[0-9]+/ ; \
-    symbol         : '+' | '-' | '*' | '/' | '%' | '^' | \
-                     \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \
-                     \"pow\" | \"min\" | \"max\" | \"fake\" | \
-                     \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" | \
-                     \"cons\" | \"len\" | \"init\" ; \
+    symbol         : /[a-zA-Z0-9_+\\-*\\/%\\^\\\\=<>!&|]+/ ; \
     sexpr          : '(' <expr>* ')' ; \
     qexpr          : '{' <expr>* '}' ; \
     expr           : <number> | <symbol> | <sexpr> | <qexpr> ; \
