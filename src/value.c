@@ -275,3 +275,22 @@ value* value_equals(value* v1, value* v2) {
         return result;
     }
 }
+
+char* get_value_type_name(value_type t) {
+    switch (t) {
+        case VALUE_NUMBER:
+            return "number";
+        case VALUE_ERROR:
+            return "error";
+        case VALUE_SYMBOL:
+            return "symbol";
+        case VALUE_SEXPR:
+            return "s-expr";
+        case VALUE_QEXPR:
+            return "q-expr";
+        case VALUE_FUNCTION:
+            return "function";
+        default:
+            return "unknown";
+    }
+}

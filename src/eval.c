@@ -7,21 +7,15 @@
 #include "env.h"
 #include "value.h"
 
-static const char* value_type_names[] = {
-    "number",
-    "error",
-    "symbol",
-    "s-expr",
-    "q-expr",
-    "function"};
-
 #define ASSERT_NUM_ARGS(fn, num_args, expected_num_args) \
     {                                                    \
         if (num_args != expected_num_args) {             \
             return value_new_error(                      \
-                "%s expects exactly %d arg%s",           \
+                "%s expects exactly %d arg%s, "          \
+                "but got %d",                            \
                 fn, expected_num_args,                   \
-                (expected_num_args == 1 ? "" : "s"));    \
+                (expected_num_args == 1 ? "" : "s"),     \
+                num_args);                               \
         }                                                \
     }
 
@@ -29,9 +23,11 @@ static const char* value_type_names[] = {
     {                                                   \
         if (num_args < min_num_args) {                  \
             return value_new_error(                     \
-                "%s expects at least %d arg%s",         \
+                "%s expects at least %d arg%s, "        \
+                "but got %d",                           \
                 fn, min_num_args,                       \
-                (min_num_args == 1 ? "" : "s"));        \
+                (min_num_args == 1 ? "" : "s"),         \
+                num_args);                              \
         }                                               \
     }
 
@@ -42,9 +38,10 @@ static const char* value_type_names[] = {
             value_to_str(arg, buffer);                   \
             return value_new_error(                      \
                 "%s: arg #%d (%s) "                      \
-                "must be of type %s",                    \
+                "must be of type %s, but got %s",        \
                 fn, ordinal, buffer,                     \
-                value_type_names[expected_type]);        \
+                get_value_type_name(expected_type),      \
+                get_value_type_name(arg->type));         \
         }                                                \
     }
 
@@ -74,8 +71,10 @@ static const char* value_type_names[] = {
             value_to_str(arg, buffer);                      \
             return value_new_error(                         \
                 "%s: arg #%d (%s) "                         \
-                "must be at least %d-long",                 \
-                fn, ordinal, buffer, min_length);           \
+                "must be at least %d-long, "                \
+                "but got %d-long",                          \
+                fn, ordinal, buffer, min_length,            \
+                arg->num_children);                         \
         }                                                   \
     }
 
