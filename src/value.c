@@ -25,7 +25,8 @@ value* value_new_error(char* error, ...) {
     va_end(args);
 
     v->type = VALUE_ERROR;
-    v->error = strdup(buffer);
+    v->error = malloc(strlen(buffer) + 1);
+    strcpy(v->error, buffer);
 
     return v;
 }
@@ -34,7 +35,8 @@ value* value_new_symbol(char* symbol) {
     value* v = malloc(sizeof(value));
 
     v->type = VALUE_SYMBOL;
-    v->symbol = strdup(symbol);
+    v->symbol = malloc(strlen(symbol) + 1);
+    strcpy(v->symbol, symbol);
 
     return v;
 }
@@ -44,7 +46,8 @@ value* value_new_function(value_fn function, char* symbol) {
 
     v->type = VALUE_FUNCTION;
     v->function = function;
-    v->symbol = strdup(symbol);
+    v->symbol = malloc(strlen(symbol) + 1);
+    strcpy(v->symbol, symbol);
 
     return v;
 }

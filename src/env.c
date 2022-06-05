@@ -51,7 +51,8 @@ void environment_put(environment* e, char* name, value* v) {
         environment_double(e);
     }
 
-    e->names[e->length] = strdup(name);
+    e->names[e->length] = malloc(strlen(name) + 1);
+    strcpy(e->names[e->length], name);
     e->values[e->length] = value_copy(v);
     e->length++;
 }
