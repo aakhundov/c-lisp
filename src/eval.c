@@ -282,6 +282,25 @@ static value* builtin_init(value** args, size_t num_args, char* name, environmen
     return result;
 }
 
+static value* builtin_def(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 2);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
+    ASSERT_MIN_ARG_LENGTH(name, args[0], 1, 0);
+    ASSERT_NUM_ARGS(name, num_args, args[0]->num_children + 1);
+
+    for (size_t i = 0; i < args[0]->num_children; i++) {
+        if (args[0]->children[i]->type != VALUE_SYMBOL) {
+            return value_new_error("%s: first argument must consist of symbols.", name);
+        }
+    }
+
+    for (size_t i = 0; i < args[0]->num_children; i++) {
+        environment_put(env, args[0]->children[i]->symbol, args[i + 1]);
+    }
+
+    return value_new_sexpr();
+}
+
 value* value_evaluate(value* v, environment* env) {
     if (v->type == VALUE_SEXPR) {
         value* result = NULL;
@@ -355,4 +374,7 @@ void environment_register_builtins(environment* e) {
     environment_register_function(e, "cons", builtin_cons);
     environment_register_function(e, "len", builtin_len);
     environment_register_function(e, "init", builtin_init);
+
+    // definition builtins
+    environment_register_function(e, "def", builtin_def);
 }
