@@ -25,8 +25,7 @@ value* value_new_error(char* error, ...) {
     va_end(args);
 
     v->type = VALUE_ERROR;
-    v->error = malloc(strlen(buffer) + 1);
-    strcpy(v->error, buffer);
+    v->error = strdup(buffer);
 
     return v;
 }
@@ -35,8 +34,17 @@ value* value_new_symbol(char* symbol) {
     value* v = malloc(sizeof(value));
 
     v->type = VALUE_SYMBOL;
-    v->symbol = malloc(strlen(symbol) + 1);
-    strcpy(v->symbol, symbol);
+    v->symbol = strdup(symbol);
+
+    return v;
+}
+
+value* value_new_function(value_fn function, char* symbol) {
+    value* v = malloc(sizeof(value));
+
+    v->type = VALUE_FUNCTION;
+    v->function = function;
+    v->symbol = strdup(symbol);
 
     return v;
 }
@@ -68,6 +76,7 @@ void value_dispose(value* v) {
             free(v->error);
             break;
         case VALUE_SYMBOL:
+        case VALUE_FUNCTION:
             free(v->symbol);
             break;
         case VALUE_SEXPR:
@@ -147,6 +156,9 @@ value* value_copy(value* v) {
         case VALUE_SYMBOL:
             result = value_new_symbol(v->symbol);
             break;
+        case VALUE_FUNCTION:
+            result = value_new_function(v->function, v->symbol);
+            break;
         case VALUE_SEXPR:
         case VALUE_QEXPR:
             result = value_new_expr(v->type);
@@ -185,6 +197,8 @@ int value_to_str(value* v, char* buffer) {
             return sprintf(buffer, "error: %s", v->error);
         case VALUE_SYMBOL:
             return sprintf(buffer, "%s", v->symbol);
+        case VALUE_FUNCTION:
+            return sprintf(buffer, "<function %s>", v->symbol);
         case VALUE_SEXPR:
             return expr_to_str(v, buffer, '(', ')');
         case VALUE_QEXPR:
@@ -216,6 +230,8 @@ value* value_compare(value* v1, value* v2) {
                 result = value_new_number(strcmp(v1->symbol, v2->symbol));
             case VALUE_ERROR:
                 result = value_new_number(strcmp(v1->error, v2->error));
+            case VALUE_FUNCTION:
+                result = value_new_number(v1->function == v2->function ? 0 : 1);
             case VALUE_SEXPR:
             case VALUE_QEXPR:
                 min_children = v1->num_children;
@@ -242,4 +258,17 @@ value* value_compare(value* v1, value* v2) {
     }
 
     return result;
+}
+
+value* value_equals(value* v1, value* v2) {
+    value* compare_result = value_compare(v1, v2);
+
+    if (compare_result->type == VALUE_ERROR) {
+        return compare_result;
+    } else {
+        value* result = value_new_number((compare_result->number == 0) ? 1 : 0);
+        value_dispose(compare_result);
+
+        return result;
+    }
 }

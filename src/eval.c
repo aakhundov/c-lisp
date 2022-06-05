@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "env.h"
 #include "value.h"
 
 static const char* value_type_names[] = {
@@ -11,29 +12,30 @@ static const char* value_type_names[] = {
     "error",
     "symbol",
     "s-expr",
-    "q-expr"};
+    "q-expr",
+    "function"};
 
-#define ASSERT_NUM_ARGS(op, num_args, expected_num_args) \
+#define ASSERT_NUM_ARGS(fn, num_args, expected_num_args) \
     {                                                    \
         if (num_args != expected_num_args) {             \
             return value_new_error(                      \
                 "%s expects exactly %d arg%s",           \
-                op, expected_num_args,                   \
+                fn, expected_num_args,                   \
                 (expected_num_args == 1 ? "" : "s"));    \
         }                                                \
     }
 
-#define ASSERT_MIN_NUM_ARGS(op, num_args, min_num_args) \
+#define ASSERT_MIN_NUM_ARGS(fn, num_args, min_num_args) \
     {                                                   \
         if (num_args < min_num_args) {                  \
             return value_new_error(                     \
                 "%s expects at least %d arg%s",         \
-                op, min_num_args,                       \
+                fn, min_num_args,                       \
                 (min_num_args == 1 ? "" : "s"));        \
         }                                               \
     }
 
-#define ASSERT_ARG_TYPE(op, arg, expected_type, ordinal) \
+#define ASSERT_ARG_TYPE(fn, arg, expected_type, ordinal) \
     {                                                    \
         if (arg->type != expected_type) {                \
             char buffer[1024];                           \
@@ -41,19 +43,19 @@ static const char* value_type_names[] = {
             return value_new_error(                      \
                 "%s: arg #%d (%s) "                      \
                 "must be of type %s",                    \
-                op, ordinal, buffer,                     \
+                fn, ordinal, buffer,                     \
                 value_type_names[expected_type]);        \
         }                                                \
     }
 
-#define ASSERT_ARGS_TYPE(op, args, expected_type, num_args, offset)  \
+#define ASSERT_ARGS_TYPE(fn, args, expected_type, num_args, offset)  \
     {                                                                \
         for (size_t i = 0; i < num_args; i++) {                      \
-            ASSERT_ARG_TYPE(op, args[i], expected_type, offset + i); \
+            ASSERT_ARG_TYPE(fn, args[i], expected_type, offset + i); \
         }                                                            \
     }
 
-#define ASSERT_ARG_LENGTH(op, arg, length, ordinal) \
+#define ASSERT_ARG_LENGTH(fn, arg, length, ordinal) \
     {                                               \
         if (arg->num_children != length) {          \
             char buffer[1024];                      \
@@ -61,11 +63,11 @@ static const char* value_type_names[] = {
             return value_new_error(                 \
                 "%s: arg #%d (%s) "                 \
                 "must be %d-long",                  \
-                op, ordinal, buffer, length);       \
+                fn, ordinal, buffer, length);       \
         }                                           \
     }
 
-#define ASSERT_MIN_ARG_LENGTH(op, arg, min_length, ordinal) \
+#define ASSERT_MIN_ARG_LENGTH(fn, arg, min_length, ordinal) \
     {                                                       \
         if (arg->num_children < min_length) {               \
             char buffer[1024];                              \
@@ -73,15 +75,13 @@ static const char* value_type_names[] = {
             return value_new_error(                         \
                 "%s: arg #%d (%s) "                         \
                 "must be at least %d-long",                 \
-                op, ordinal, buffer, min_length);           \
+                fn, ordinal, buffer, min_length);           \
         }                                                   \
     }
 
-typedef value* (*op_fn)(value**, size_t, char* op);
-
-static value* op_add(value** args, size_t num_args, char* op) {
-    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
-    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+static value* builtin_add(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARGS_TYPE(name, args, VALUE_NUMBER, num_args, 0);
 
     double result = (*args++)->number;
     for (size_t i = 1; i < num_args; i++) {
@@ -91,9 +91,9 @@ static value* op_add(value** args, size_t num_args, char* op) {
     return value_new_number(result);
 }
 
-static value* op_subtract(value** args, size_t num_args, char* op) {
-    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
-    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+static value* builtin_subtract(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARGS_TYPE(name, args, VALUE_NUMBER, num_args, 0);
 
     if (num_args == 1) {
         return value_new_number(-(*args)->number);
@@ -107,9 +107,9 @@ static value* op_subtract(value** args, size_t num_args, char* op) {
     return value_new_number(result);
 }
 
-static value* op_multiply(value** args, size_t num_args, char* op) {
-    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
-    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+static value* builtin_multiply(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARGS_TYPE(name, args, VALUE_NUMBER, num_args, 0);
 
     double result = (*args++)->number;
     for (size_t i = 1; i < num_args; i++) {
@@ -119,9 +119,9 @@ static value* op_multiply(value** args, size_t num_args, char* op) {
     return value_new_number(result);
 }
 
-static value* op_divide(value** args, size_t num_args, char* op) {
-    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
-    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+static value* builtin_divide(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARGS_TYPE(name, args, VALUE_NUMBER, num_args, 0);
 
     double result = (*args++)->number;
     for (size_t i = 1; i < num_args; i++) {
@@ -134,9 +134,9 @@ static value* op_divide(value** args, size_t num_args, char* op) {
     return value_new_number(result);
 }
 
-static value* op_modulo(value** args, size_t num_args, char* op) {
-    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
-    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+static value* builtin_modulo(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARGS_TYPE(name, args, VALUE_NUMBER, num_args, 0);
 
     int result = (int)(*args++)->number;
     for (size_t i = 1; i < num_args; i++) {
@@ -146,9 +146,9 @@ static value* op_modulo(value** args, size_t num_args, char* op) {
     return value_new_number(result);
 }
 
-static value* op_power(value** args, size_t num_args, char* op) {
-    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
-    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+static value* builtin_power(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARGS_TYPE(name, args, VALUE_NUMBER, num_args, 0);
 
     double result = (*args++)->number;
     for (size_t i = 1; i < num_args; i++) {
@@ -158,9 +158,9 @@ static value* op_power(value** args, size_t num_args, char* op) {
     return value_new_number(result);
 }
 
-static value* op_minimum(value** args, size_t num_args, char* op) {
-    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
-    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+static value* builtin_minimum(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARGS_TYPE(name, args, VALUE_NUMBER, num_args, 0);
 
     double result = (*args++)->number;
     for (size_t i = 1; i < num_args; i++) {
@@ -173,9 +173,9 @@ static value* op_minimum(value** args, size_t num_args, char* op) {
     return value_new_number(result);
 }
 
-static value* op_maximum(value** args, size_t num_args, char* op) {
-    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
-    ASSERT_ARGS_TYPE(op, args, VALUE_NUMBER, num_args, 0);
+static value* builtin_maximum(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARGS_TYPE(name, args, VALUE_NUMBER, num_args, 0);
 
     double result = (*args++)->number;
     for (size_t i = 1; i < num_args; i++) {
@@ -188,8 +188,8 @@ static value* op_maximum(value** args, size_t num_args, char* op) {
     return value_new_number(result);
 }
 
-static value* op_list(value** args, size_t num_args, char* op) {
-    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
+static value* builtin_list(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 1);
 
     value* result = value_new_qexpr();
     for (size_t i = 0; i < num_args; i++) {
@@ -199,10 +199,10 @@ static value* op_list(value** args, size_t num_args, char* op) {
     return result;
 }
 
-static value* op_head(value** args, size_t num_args, char* op) {
-    ASSERT_NUM_ARGS(op, num_args, 1);
-    ASSERT_ARG_TYPE(op, args[0], VALUE_QEXPR, 0);
-    ASSERT_MIN_ARG_LENGTH(op, args[0], 1, 0);
+static value* builtin_head(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
+    ASSERT_MIN_ARG_LENGTH(name, args[0], 1, 0);
 
     value* result = value_new_qexpr();
     value_add_child(result, value_copy(args[0]->children[0]));
@@ -210,10 +210,10 @@ static value* op_head(value** args, size_t num_args, char* op) {
     return result;
 }
 
-static value* op_tail(value** args, size_t num_args, char* op) {
-    ASSERT_NUM_ARGS(op, num_args, 1);
-    ASSERT_ARG_TYPE(op, args[0], VALUE_QEXPR, 0);
-    ASSERT_MIN_ARG_LENGTH(op, args[0], 1, 0);
+static value* builtin_tail(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
+    ASSERT_MIN_ARG_LENGTH(name, args[0], 1, 0);
 
     value* result = value_new_qexpr();
     for (size_t i = 1; i < args[0]->num_children; i++) {
@@ -223,9 +223,9 @@ static value* op_tail(value** args, size_t num_args, char* op) {
     return result;
 }
 
-static value* op_join(value** args, size_t num_args, char* op) {
-    ASSERT_MIN_NUM_ARGS(op, num_args, 1);
-    ASSERT_ARGS_TYPE(op, args, VALUE_QEXPR, num_args, 0);
+static value* builtin_join(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARGS_TYPE(name, args, VALUE_QEXPR, num_args, 0);
 
     value* result = value_new_qexpr();
     for (size_t i = 0; i < num_args; i++) {
@@ -237,21 +237,21 @@ static value* op_join(value** args, size_t num_args, char* op) {
     return result;
 }
 
-static value* op_eval(value** args, size_t num_args, char* op) {
-    ASSERT_NUM_ARGS(op, num_args, 1);
-    ASSERT_ARG_TYPE(op, args[0], VALUE_QEXPR, 0);
+static value* builtin_eval(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
 
     value* temp = value_copy(args[0]);
     temp->type = VALUE_SEXPR;
-    value* result = value_evaluate(temp);
+    value* result = value_evaluate(temp, env);
     value_dispose(temp);
 
     return result;
 }
 
-static value* op_cons(value** args, size_t num_args, char* op) {
-    ASSERT_NUM_ARGS(op, num_args, 2);
-    ASSERT_ARG_TYPE(op, args[1], VALUE_QEXPR, 1);
+static value* builtin_cons(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 2);
+    ASSERT_ARG_TYPE(name, args[1], VALUE_QEXPR, 1);
 
     value* result = value_new_qexpr();
     value_add_child(result, value_copy(args[0]));
@@ -262,17 +262,17 @@ static value* op_cons(value** args, size_t num_args, char* op) {
     return result;
 }
 
-static value* op_len(value** args, size_t num_args, char* op) {
-    ASSERT_NUM_ARGS(op, num_args, 1);
-    ASSERT_ARG_TYPE(op, args[0], VALUE_QEXPR, 0);
+static value* builtin_len(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
 
     return value_new_number(args[0]->num_children);
 }
 
-static value* op_init(value** args, size_t num_args, char* op) {
-    ASSERT_NUM_ARGS(op, num_args, 1);
-    ASSERT_ARG_TYPE(op, args[0], VALUE_QEXPR, 0);
-    ASSERT_MIN_ARG_LENGTH(op, args[0], 1, 0);
+static value* builtin_init(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
+    ASSERT_MIN_ARG_LENGTH(name, args[0], 1, 0);
 
     value* result = value_new_qexpr();
     for (size_t i = 0; i < args[0]->num_children - 1; i++) {
@@ -282,51 +282,13 @@ static value* op_init(value** args, size_t num_args, char* op) {
     return result;
 }
 
-static op_fn get_op_fn(char* op) {
-    if (strcmp(op, "+") == 0 || strcmp(op, "add") == 0) {
-        return op_add;
-    } else if (strcmp(op, "-") == 0 || strcmp(op, "sub") == 0) {
-        return op_subtract;
-    } else if (strcmp(op, "*") == 0 || strcmp(op, "mul") == 0) {
-        return op_multiply;
-    } else if (strcmp(op, "/") == 0 || strcmp(op, "div") == 0) {
-        return op_divide;
-    } else if (strcmp(op, "%") == 0 || strcmp(op, "mod") == 0) {
-        return op_modulo;
-    } else if (strcmp(op, "^") == 0 || strcmp(op, "pow") == 0) {
-        return op_power;
-    } else if (strcmp(op, "min") == 0) {
-        return op_minimum;
-    } else if (strcmp(op, "max") == 0) {
-        return op_maximum;
-    } else if (strcmp(op, "list") == 0) {
-        return op_list;
-    } else if (strcmp(op, "head") == 0) {
-        return op_head;
-    } else if (strcmp(op, "tail") == 0) {
-        return op_tail;
-    } else if (strcmp(op, "join") == 0) {
-        return op_join;
-    } else if (strcmp(op, "eval") == 0) {
-        return op_eval;
-    } else if (strcmp(op, "cons") == 0) {
-        return op_cons;
-    } else if (strcmp(op, "len") == 0) {
-        return op_len;
-    } else if (strcmp(op, "init") == 0) {
-        return op_init;
-    } else {
-        return NULL;
-    }
-}
-
-value* value_evaluate(value* v) {
+value* value_evaluate(value* v, environment* env) {
     if (v->type == VALUE_SEXPR) {
         value* result = NULL;
         value* temp = value_new_sexpr();
 
         for (size_t i = 0; i < v->num_children; i++) {
-            value* evaled = value_evaluate(v->children[i]);
+            value* evaled = value_evaluate(v->children[i], env);
 
             if (evaled->type == VALUE_ERROR) {
                 result = evaled;
@@ -347,26 +309,50 @@ value* value_evaluate(value* v) {
 
         if (result == NULL) {
             char buffer[1024];
-            value* op_value = temp->children[0];
+            value* fn = temp->children[0];
 
-            if (op_value->type != VALUE_SYMBOL) {
+            if (fn->type != VALUE_FUNCTION) {
                 value_to_str(v, buffer);
-                result = value_new_error("s-expr %s does not start with a symbol", buffer);
+                result = value_new_error("s-expr %s must start with a function", buffer);
             } else {
-                op_fn op = get_op_fn(op_value->symbol);
-
-                if (op == NULL) {
-                    result = value_new_error("unrecognized symbol: %s", op_value->symbol);
-                } else {
-                    result = op(temp->children + 1, temp->num_children - 1, op_value->symbol);
-                }
+                result = fn->function(temp->children + 1, temp->num_children - 1, fn->symbol, env);
             }
         }
 
         value_dispose(temp);
 
         return result;
+    } else if (v->type == VALUE_SYMBOL) {
+        return environment_get(env, v->symbol);
     } else {
         return value_copy(v);
     }
+}
+
+void environment_register_builtins(environment* e) {
+    // arithmetic builtins
+    environment_register_function(e, "+", builtin_add);
+    environment_register_function(e, "add", builtin_add);
+    environment_register_function(e, "-", builtin_subtract);
+    environment_register_function(e, "sub", builtin_subtract);
+    environment_register_function(e, "*", builtin_multiply);
+    environment_register_function(e, "mul", builtin_multiply);
+    environment_register_function(e, "/", builtin_divide);
+    environment_register_function(e, "div", builtin_divide);
+    environment_register_function(e, "%", builtin_modulo);
+    environment_register_function(e, "mod", builtin_modulo);
+    environment_register_function(e, "^", builtin_power);
+    environment_register_function(e, "pow", builtin_power);
+    environment_register_function(e, "min", builtin_minimum);
+    environment_register_function(e, "max", builtin_maximum);
+
+    // list manipulation builtins
+    environment_register_function(e, "list", builtin_list);
+    environment_register_function(e, "head", builtin_head);
+    environment_register_function(e, "tail", builtin_tail);
+    environment_register_function(e, "join", builtin_join);
+    environment_register_function(e, "eval", builtin_eval);
+    environment_register_function(e, "cons", builtin_cons);
+    environment_register_function(e, "len", builtin_len);
+    environment_register_function(e, "init", builtin_init);
 }

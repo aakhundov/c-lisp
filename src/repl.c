@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "edit.h"
+#include "env.h"
 #include "eval.h"
 #include "parse.h"
 #include "value.h"
@@ -22,7 +23,7 @@ static int is_exit_command(char* line) {
     return 0;
 }
 
-void run_repl(parser* p) {
+void run_repl(parser* p, environment* env) {
     puts("clisp version 0.0.1");
     puts("enter \"quit\" to quit\n");
 
@@ -41,7 +42,7 @@ void run_repl(parser* p) {
             if (parser_parse(p, input, &r)) {
                 tree t = result_get_tree(&r);
                 value* v = value_from_tree(&t);
-                value* e = value_evaluate(v);
+                value* e = value_evaluate(v, env);
 
                 value_to_str(e, output);
                 printf("%s\n", output);
