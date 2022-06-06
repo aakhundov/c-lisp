@@ -297,7 +297,11 @@ static value* builtin_def(value** args, size_t num_args, char* name, environment
         environment_put(env, args[0]->children[i]->symbol, args[i + 1]);
     }
 
-    return value_new_sexpr();
+    char buffer[1024];
+    value_to_str(args[0], buffer);
+    buffer[strlen(buffer) - 1] = '\0';
+
+    return value_new_info("variables defined: %s", buffer + 1);
 }
 
 value* value_evaluate(value* v, environment* env) {

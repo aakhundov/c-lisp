@@ -56,7 +56,17 @@ static void test_error_output(parser* p, environment* env, char* input, char* ex
 
     if (e != NULL) {
         assert(e->type == VALUE_ERROR);
-        assert(strstr(e->error, expected));
+        assert(strstr(e->symbol, expected));
+        value_dispose(e);
+    }
+}
+
+static void test_info_output(parser* p, environment* env, char* input, char* expected) {
+    value* e = get_evaluated(p, env, input);
+
+    if (e != NULL) {
+        assert(e->type == VALUE_INFO);
+        assert(strstr(e->symbol, expected));
         value_dispose(e);
     }
 }
@@ -237,20 +247,20 @@ static void test_init(parser* p, environment* env) {
 
 static void test_def(parser* p, environment* env) {
     test_error_output(p, env, "two", "undefined symbol");
-    test_str_output(p, env, "def {two} 2", "()");
+    test_info_output(p, env, "def {two} 2", "variables defined: two");
     test_str_output(p, env, "two", "2");
     test_error_output(p, env, "pi", "undefined symbol");
     test_error_output(p, env, "times", "undefined symbol");
     test_error_output(p, env, "some", "undefined symbol");
-    test_str_output(p, env, "def {pi times some} 3.14 * {xyz}", "()");
+    test_info_output(p, env, "def {pi times some} 3.14 * {xyz}", "variables defined: pi times some");
     test_str_output(p, env, "pi", "3.14");
     test_str_output(p, env, "times", "<function *>");
     test_str_output(p, env, "some", "{xyz}");
     test_number_output(p, env, "times two pi", 6.28);
     test_error_output(p, env, "arglist", "undefined symbol");
-    test_str_output(p, env, "def {arglist} {a b x y}", "()");
+    test_info_output(p, env, "def {arglist} {a b x y}", "variables defined: arglist");
     test_str_output(p, env, "arglist", "{a b x y}");
-    test_str_output(p, env, "def arglist 1 2 3 4", "()");
+    test_info_output(p, env, "def arglist 1 2 3 4", "variables defined: a b x y");
     test_str_output(p, env, "list a b x y", "{1 2 3 4}");
     test_number_output(p, env, "eval (join {+} (list a b x y))", 10);
 

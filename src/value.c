@@ -15,28 +15,41 @@ value* value_new_number(double number) {
     return v;
 }
 
-value* value_new_error(char* error, ...) {
-    value* v = malloc(sizeof(value));
-    char buffer[1024];
-
-    va_list args;
-    va_start(args, error);
-    vsnprintf(buffer, sizeof(buffer), error, args);
-    va_end(args);
-
-    v->type = VALUE_ERROR;
-    v->error = malloc(strlen(buffer) + 1);
-    strcpy(v->error, buffer);
-
-    return v;
-}
-
 value* value_new_symbol(char* symbol) {
     value* v = malloc(sizeof(value));
 
     v->type = VALUE_SYMBOL;
     v->symbol = malloc(strlen(symbol) + 1);
     strcpy(v->symbol, symbol);
+
+    return v;
+}
+
+static value* value_new_symbol_from_args(char* format, va_list args) {
+    char buffer[1024];
+    vsnprintf(buffer, sizeof(buffer), format, args);
+
+    return value_new_symbol(buffer);
+}
+
+value* value_new_error(char* error, ...) {
+    va_list args;
+    va_start(args, error);
+    value* v = value_new_symbol_from_args(error, args);
+    va_end(args);
+
+    v->type = VALUE_ERROR;
+
+    return v;
+}
+
+value* value_new_info(char* info, ...) {
+    va_list args;
+    va_start(args, info);
+    value* v = value_new_symbol_from_args(info, args);
+    va_end(args);
+
+    v->type = VALUE_INFO;
 
     return v;
 }
@@ -75,10 +88,9 @@ void value_dispose(value* v) {
     switch (v->type) {
         case VALUE_NUMBER:
             break;
-        case VALUE_ERROR:
-            free(v->error);
-            break;
         case VALUE_SYMBOL:
+        case VALUE_ERROR:
+        case VALUE_INFO:
         case VALUE_FUNCTION:
             free(v->symbol);
             break;
@@ -153,11 +165,14 @@ value* value_copy(value* v) {
         case VALUE_NUMBER:
             result = value_new_number(v->number);
             break;
-        case VALUE_ERROR:
-            result = value_new_error(v->error);
-            break;
         case VALUE_SYMBOL:
             result = value_new_symbol(v->symbol);
+            break;
+        case VALUE_ERROR:
+            result = value_new_error(v->symbol);
+            break;
+        case VALUE_INFO:
+            result = value_new_info(v->symbol);
             break;
         case VALUE_FUNCTION:
             result = value_new_function(v->function, v->symbol);
@@ -196,10 +211,12 @@ int value_to_str(value* v, char* buffer) {
     switch (v->type) {
         case VALUE_NUMBER:
             return sprintf(buffer, "%g", v->number);
-        case VALUE_ERROR:
-            return sprintf(buffer, "error: %s", v->error);
         case VALUE_SYMBOL:
             return sprintf(buffer, "%s", v->symbol);
+        case VALUE_ERROR:
+            return sprintf(buffer, "error: %s", v->symbol);
+        case VALUE_INFO:
+            return sprintf(buffer, "info: %s", v->symbol);
         case VALUE_FUNCTION:
             return sprintf(buffer, "<function %s>", v->symbol);
         case VALUE_SEXPR:
@@ -230,9 +247,9 @@ value* value_compare(value* v1, value* v2) {
                     result = value_new_number(0);
                 }
             case VALUE_SYMBOL:
-                result = value_new_number(strcmp(v1->symbol, v2->symbol));
             case VALUE_ERROR:
-                result = value_new_number(strcmp(v1->error, v2->error));
+            case VALUE_INFO:
+                result = value_new_number(strcmp(v1->symbol, v2->symbol));
             case VALUE_FUNCTION:
                 result = value_new_number(v1->function == v2->function ? 0 : 1);
             case VALUE_SEXPR:
@@ -280,16 +297,18 @@ char* get_value_type_name(value_type t) {
     switch (t) {
         case VALUE_NUMBER:
             return "number";
-        case VALUE_ERROR:
-            return "error";
         case VALUE_SYMBOL:
             return "symbol";
+        case VALUE_ERROR:
+            return "error";
+        case VALUE_INFO:
+            return "info";
+        case VALUE_FUNCTION:
+            return "function";
         case VALUE_SEXPR:
             return "s-expr";
         case VALUE_QEXPR:
             return "q-expr";
-        case VALUE_FUNCTION:
-            return "function";
         default:
             return "unknown";
     }

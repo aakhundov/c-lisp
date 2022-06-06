@@ -5,11 +5,12 @@
 
 typedef enum {
     VALUE_NUMBER = 0,
-    VALUE_ERROR = 1,
-    VALUE_SYMBOL = 2,
-    VALUE_SEXPR = 3,
-    VALUE_QEXPR = 4,
-    VALUE_FUNCTION = 5
+    VALUE_SYMBOL = 1,
+    VALUE_ERROR = 2,
+    VALUE_INFO = 3,
+    VALUE_FUNCTION = 4,
+    VALUE_SEXPR = 5,
+    VALUE_QEXPR = 6
 } value_type;
 
 typedef struct value value;
@@ -20,7 +21,6 @@ typedef value* (*value_fn)(value** args, size_t num_args, char* name, environmen
 struct value {
     value_type type;
     double number;
-    char* error;
     char* symbol;
     value_fn function;
     value** children;
@@ -29,8 +29,9 @@ struct value {
 };
 
 value* value_new_number(double number);
-value* value_new_error(char* error, ...);
 value* value_new_symbol(char* symbol);
+value* value_new_error(char* error, ...);
+value* value_new_info(char* error, ...);
 value* value_new_function(value_fn function, char* symbol);
 value* value_new_sexpr();
 value* value_new_qexpr();
