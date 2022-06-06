@@ -1,5 +1,6 @@
 #include "env.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -57,8 +58,26 @@ void environment_put(environment* e, char* name, value* v) {
     e->length++;
 }
 
+void environment_register_number(environment* e, char* name, double number) {
+    value* num = value_new_number(number);
+    environment_put(e, name, num);
+    value_dispose(num);
+}
+
 void environment_register_function(environment* e, char* name, value_fn function) {
     value* fn = value_new_function(function, name);
     environment_put(e, name, fn);
     value_dispose(fn);
+}
+
+int environment_to_str(environment* e, char* buffer) {
+    char* running = buffer;
+    for (size_t i = 0; i < e->length; i++) {
+        char val_buffer[1024];
+        value_to_str(e->values[i], val_buffer);
+        running += sprintf(running, "%-10s:   %s\n", e->names[i], val_buffer);
+    }
+    *running = '\0';
+
+    return running - buffer;
 }

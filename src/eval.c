@@ -352,6 +352,10 @@ value* value_evaluate(value* v, environment* env) {
 }
 
 void environment_register_builtins(environment* e) {
+    // constants
+    environment_register_number(e, "E", 2.7182818);
+    environment_register_number(e, "PI", 3.1415926);
+
     // arithmetic builtins
     environment_register_function(e, "+", builtin_add);
     environment_register_function(e, "add", builtin_add);
