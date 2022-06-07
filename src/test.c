@@ -121,15 +121,15 @@ static void test_errors(parser* p, environment* env) {
     test_error_output(p, env, "1 2 3", "(1 2 3)");
     test_error_output(p, env, "(1 2 3)", "must start with a function");
     test_error_output(p, env, "(1 2 3)", "(1 2 3)");
-    test_error_output(p, env, "+ 1 2 3 -", "arg #3 (<function ->) must be of type number");
+    test_error_output(p, env, "+ 1 2 3 -", "arg #3 (<builtin ->) must be of type number");
     test_error_output(p, env, "+ 1 2 3 {4 5}", "arg #3 ({4 5}) must be of type number");
 }
 
 static void test_str(parser* p, environment* env) {
     test_str_output(p, env, "", "()");
     test_str_output(p, env, "  ", "()");
-    test_str_output(p, env, "+", "<function +>");
-    test_str_output(p, env, "min", "<function min>");
+    test_str_output(p, env, "+", "<builtin +>");
+    test_str_output(p, env, "min", "<builtin min>");
     test_str_output(p, env, "fake", "error: undefined symbol: fake");
     test_str_output(p, env, "-5", "-5");
     test_str_output(p, env, "(-3.14)", "-3.14");
@@ -145,10 +145,10 @@ static void test_str(parser* p, environment* env) {
 static void test_list(parser* p, environment* env) {
     test_str_output(p, env, "list 1 2 3", "{1 2 3}");
     test_str_output(p, env, "list {1 2 3}", "{{1 2 3}}");
-    test_str_output(p, env, "list + - * /", "{<function +> <function -> <function *> <function />}");
+    test_str_output(p, env, "list + - * /", "{<builtin +> <builtin -> <builtin *> <builtin />}");
     test_str_output(p, env, "list 0", "{0}");
-    test_str_output(p, env, "list", "<function list>");
-    test_str_output(p, env, "list list", "{<function list>}");
+    test_str_output(p, env, "list", "<builtin list>");
+    test_str_output(p, env, "list list", "{<builtin list>}");
     test_str_output(p, env, "(list 1 2 3)", "{1 2 3}");
     test_str_output(p, env, "{list 1 2 3}", "{list 1 2 3}");
 }
@@ -193,10 +193,10 @@ static void test_join(parser* p, environment* env) {
 static void test_eval(parser* p, environment* env) {
     test_number_output(p, env, "eval {+ 1 2 3}", 6);
     test_str_output(p, env, "eval {}", "()");
-    test_str_output(p, env, "eval {+}", "<function +>");
+    test_str_output(p, env, "eval {+}", "<builtin +>");
     test_str_output(p, env, "eval {list {1 2 3}}", "{{1 2 3}}");
     test_str_output(p, env, "eval {list 1 2 3} ", "{1 2 3}");
-    test_str_output(p, env, "eval {eval {list + 2 3}}", "{<function +> 2 3}");
+    test_str_output(p, env, "eval {eval {list + 2 3}}", "{<builtin +> 2 3}");
     test_str_output(p, env, "eval {head (list 1 2 3 4)}", "{1}");
     test_str_output(p, env, "eval (tail {tail tail {5 6 7}})", "{6 7}");
     test_number_output(p, env, "eval (head {(+ 1 2) (+ 10 20)})", 3);
@@ -210,9 +210,9 @@ static void test_cons(parser* p, environment* env) {
     test_str_output(p, env, "cons 1 {}", "{1}");
     test_str_output(p, env, "cons 1 {2 3}", "{1 2 3}");
     test_str_output(p, env, "cons {1} {2 3}", "{{1} 2 3}");
-    test_str_output(p, env, "cons + {1 2 3}", "{<function +> 1 2 3}");
+    test_str_output(p, env, "cons + {1 2 3}", "{<builtin +> 1 2 3}");
     test_number_output(p, env, "eval (cons + {1 2 3})", 6);
-    test_str_output(p, env, "cons", "<function cons>");
+    test_str_output(p, env, "cons", "<builtin cons>");
     test_str_output(p, env, "cons {} {}", "{{}}");
 
     test_error_output(p, env, "cons 1", "expects exactly 2 args");
@@ -229,7 +229,7 @@ static void test_len(parser* p, environment* env) {
     test_number_output(p, env, "len {{1} {2 3 4 5}}", 2);
 
     test_error_output(p, env, "len 1", "arg #0 (1) must be of type q-expr");
-    test_error_output(p, env, "len +", "arg #0 (<function +>) must be of type q-expr");
+    test_error_output(p, env, "len +", "arg #0 (<builtin +>) must be of type q-expr");
     test_error_output(p, env, "len {} {}", "expects exactly 1 arg");
 }
 
@@ -254,7 +254,7 @@ static void test_def(parser* p, environment* env) {
     test_error_output(p, env, "some", "undefined symbol");
     test_info_output(p, env, "def {pi times some} 3.14 * {xyz}", "variables defined: pi times some");
     test_str_output(p, env, "pi", "3.14");
-    test_str_output(p, env, "times", "<function *>");
+    test_str_output(p, env, "times", "<builtin *>");
     test_str_output(p, env, "some", "{xyz}");
     test_number_output(p, env, "times two pi", 6.28);
     test_error_output(p, env, "arglist", "undefined symbol");
@@ -270,8 +270,23 @@ static void test_def(parser* p, environment* env) {
     test_error_output(p, env, "def {a b} 1", "expects exactly 3 args");
     test_error_output(p, env, "def {a b c} 1", "expects exactly 4 args");
     test_error_output(p, env, "def {a b c} 1 2", "expects exactly 4 args");
-    test_error_output(p, env, "def {1} 2", "first argument must consist of symbols");
-    test_error_output(p, env, "def {a 1} 2 3", "first argument must consist of symbols");
+    test_error_output(p, env, "def {1} 2", "arg #0 ({1}) must consist of symbol children");
+    test_error_output(p, env, "def {a 1} 2 3", "arg #0 ({a 1}) must consist of symbol children");
+}
+
+static void test_lambda(parser* p, environment* env) {
+    test_str_output(p, env, "lambda", "<builtin lambda>");
+    test_str_output(p, env, "lambda {x} {x}", "<lambda {x} {x}>");
+    test_str_output(p, env, "lambda {} {x}", "<lambda {} {x}>");
+    test_str_output(p, env, "lambda {x y} {+ x y}", "<lambda {x y} {+ x y}>");
+
+    test_error_output(p, env, "lambda 1", "expects exactly 2 args");
+    test_error_output(p, env, "lambda {x}", "expects exactly 2 args");
+    test_error_output(p, env, "lambda {x} {x} {x}", "expects exactly 2 args");
+    test_error_output(p, env, "lambda 1 2", "arg #0 (1) must be of type q-expr");
+    test_error_output(p, env, "lambda {x} 2", "arg #1 (2) must be of type q-expr");
+    test_error_output(p, env, "lambda 1 {x}", "arg #0 (1) must be of type q-expr");
+    test_error_output(p, env, "lambda {1} {x}", "arg #0 ({1}) must consist of symbol children");
 }
 
 void run_test(parser* p, environment* env) {
@@ -289,4 +304,5 @@ void run_test(parser* p, environment* env) {
     RUN_TEST_FN(test_len, p, env);
     RUN_TEST_FN(test_init, p, env);
     RUN_TEST_FN(test_def, p, env);
+    RUN_TEST_FN(test_lambda, p, env);
 }

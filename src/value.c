@@ -1,5 +1,6 @@
 #include "value.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -54,13 +55,31 @@ value* value_new_info(char* info, ...) {
     return v;
 }
 
-value* value_new_function(value_fn function, char* symbol) {
+value* value_new_function_builtin(value_fn builtin, char* symbol) {
     value* v = malloc(sizeof(value));
 
     v->type = VALUE_FUNCTION;
-    v->function = function;
+    v->builtin = builtin;
     v->symbol = malloc(strlen(symbol) + 1);
+    v->formals = NULL;
+    v->body = NULL;
+
     strcpy(v->symbol, symbol);
+
+    return v;
+}
+
+value* value_new_function_lambda(value* formals, value* body) {
+    assert(formals->type == VALUE_QEXPR);
+    assert(body->type == VALUE_QEXPR);
+
+    value* v = malloc(sizeof(value));
+
+    v->type = VALUE_FUNCTION;
+    v->builtin = NULL;
+    v->symbol = NULL;
+    v->formals = value_copy(formals);
+    v->body = value_copy(body);
 
     return v;
 }
@@ -91,8 +110,15 @@ void value_dispose(value* v) {
         case VALUE_SYMBOL:
         case VALUE_ERROR:
         case VALUE_INFO:
-        case VALUE_FUNCTION:
             free(v->symbol);
+            break;
+        case VALUE_FUNCTION:
+            if (v->builtin != NULL) {
+                free(v->symbol);
+            } else {
+                value_dispose(v->formals);
+                value_dispose(v->body);
+            }
             break;
         case VALUE_SEXPR:
         case VALUE_QEXPR:
@@ -175,7 +201,11 @@ value* value_copy(value* v) {
             result = value_new_info(v->symbol);
             break;
         case VALUE_FUNCTION:
-            result = value_new_function(v->function, v->symbol);
+            if (v->builtin != NULL) {
+                result = value_new_function_builtin(v->builtin, v->symbol);
+            } else {
+                result = value_new_function_lambda(v->formals, v->body);
+            }
             break;
         case VALUE_SEXPR:
         case VALUE_QEXPR:
@@ -207,6 +237,16 @@ static int expr_to_str(value* v, char* buffer, char open, char close) {
     return running - buffer;
 }
 
+static int lambda_to_str(value* v, char* buffer) {
+    char formals_buffer[1024];
+    char body_buffer[1024];
+
+    value_to_str(v->formals, formals_buffer);
+    value_to_str(v->body, body_buffer);
+
+    return sprintf(buffer, "<lambda %s %s>", formals_buffer, body_buffer);
+}
+
 int value_to_str(value* v, char* buffer) {
     switch (v->type) {
         case VALUE_NUMBER:
@@ -218,7 +258,11 @@ int value_to_str(value* v, char* buffer) {
         case VALUE_INFO:
             return sprintf(buffer, "info: %s", v->symbol);
         case VALUE_FUNCTION:
-            return sprintf(buffer, "<function %s>", v->symbol);
+            if (v->builtin != NULL) {
+                return sprintf(buffer, "<builtin %s>", v->symbol);
+            } else {
+                return lambda_to_str(v, buffer);
+            }
         case VALUE_SEXPR:
             return expr_to_str(v, buffer, '(', ')');
         case VALUE_QEXPR:
@@ -232,7 +276,10 @@ value* value_compare(value* v1, value* v2) {
     value* result = NULL;
 
     if (v1->type != v2->type) {
-        result = value_new_number(v1->type - v2->type);
+        result = value_new_error(
+            "can't compare values of different types: %s and %s",
+            get_value_type_name(v1->type),
+            get_value_type_name(v2->type));
     } else {
         value* sub_result;
         size_t min_children;
@@ -247,11 +294,11 @@ value* value_compare(value* v1, value* v2) {
                     result = value_new_number(0);
                 }
             case VALUE_SYMBOL:
+                result = value_new_number(strcmp(v1->symbol, v2->symbol));
             case VALUE_ERROR:
             case VALUE_INFO:
-                result = value_new_number(strcmp(v1->symbol, v2->symbol));
             case VALUE_FUNCTION:
-                result = value_new_number(v1->function == v2->function ? 0 : 1);
+                result = value_new_error("incomprable type: %s", get_value_type_name(v1->type));
             case VALUE_SEXPR:
             case VALUE_QEXPR:
                 min_children = v1->num_children;
@@ -281,16 +328,65 @@ value* value_compare(value* v1, value* v2) {
 }
 
 value* value_equals(value* v1, value* v2) {
-    value* compare_result = value_compare(v1, v2);
+    value* result = NULL;
 
-    if (compare_result->type == VALUE_ERROR) {
-        return compare_result;
+    if (v1->type != v2->type) {
+        result = value_new_number(0);
     } else {
-        value* result = value_new_number((compare_result->number == 0) ? 1 : 0);
-        value_dispose(compare_result);
+        value* sub_result;
 
-        return result;
+        switch (v1->type) {
+            case VALUE_NUMBER:
+                result = value_new_number(v1->number == v2->number ? 1 : 0);
+            case VALUE_SYMBOL:
+            case VALUE_ERROR:
+            case VALUE_INFO:
+                result = value_new_number(strcmp(v1->symbol, v2->symbol) == 0 ? 1 : 0);
+            case VALUE_FUNCTION:
+                if (v1->builtin != NULL && v1->builtin != NULL) {
+                    result = value_new_number(v1->builtin == v2->builtin ? 1 : 0);
+                } else if (v1->builtin == NULL && v1->builtin == NULL) {
+                    sub_result = value_equals(v1->formals, v2->formals);
+                    if (sub_result->type == VALUE_ERROR || sub_result->number == 0) {
+                        result = sub_result;
+                    } else {
+                        value_dispose(sub_result);
+                        sub_result = value_equals(v1->body, v2->body);
+                        if (sub_result->type == VALUE_ERROR || sub_result->number == 0) {
+                            result = sub_result;
+                        } else {
+                            value_dispose(sub_result);
+                            result = value_new_number(1);
+                        }
+                    }
+                } else {
+                    result = value_new_number(0);
+                }
+            case VALUE_SEXPR:
+            case VALUE_QEXPR:
+                if (v1->num_children != v2->num_children) {
+                    result = value_new_number(0);
+                } else {
+                    for (size_t i = 0; i < v1->num_children; i++) {
+                        sub_result = value_equals(v1->children[i], v2->children[i]);
+                        if (sub_result->type == VALUE_ERROR || sub_result->number == 0) {
+                            result = sub_result;
+                            break;
+                        } else {
+                            value_dispose(sub_result);
+                        }
+                    }
+
+                    if (result == NULL) {
+                        result = value_new_number(1);
+                    }
+                }
+            default:
+                result = value_new_error("unknown value type: %d", v1->type);
+        }
     }
+
+    return result;
 }
 
 char* get_value_type_name(value_type t) {

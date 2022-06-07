@@ -65,7 +65,7 @@ void environment_register_number(environment* e, char* name, double number) {
 }
 
 void environment_register_function(environment* e, char* name, value_fn function) {
-    value* fn = value_new_function(function, name);
+    value* fn = value_new_function_builtin(function, name);
     environment_put(e, name, fn);
     value_dispose(fn);
 }

@@ -52,6 +52,22 @@
         }                                                            \
     }
 
+#define ASSERT_EXPR_CHILDREN_TYPE(fn, arg, expected_type, ordinal) \
+    {                                                              \
+        for (size_t i = 0; i < arg->num_children; i++) {           \
+            if (arg->children[i]->type != expected_type) {         \
+                char buffer[1024];                                 \
+                value_to_str(arg, buffer);                         \
+                return value_new_error(                            \
+                    "%s: arg #%d (%s) "                            \
+                    "must consist of %s children, but got %s",     \
+                    fn, ordinal, buffer,                           \
+                    get_value_type_name(expected_type),            \
+                    get_value_type_name(arg->children[i]->type));  \
+            }                                                      \
+        }                                                          \
+    }
+
 #define ASSERT_ARG_LENGTH(fn, arg, length, ordinal) \
     {                                               \
         if (arg->num_children != length) {          \
@@ -286,12 +302,7 @@ static value* builtin_def(value** args, size_t num_args, char* name, environment
     ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
     ASSERT_MIN_ARG_LENGTH(name, args[0], 1, 0);
     ASSERT_NUM_ARGS(name, num_args, args[0]->num_children + 1);
-
-    for (size_t i = 0; i < args[0]->num_children; i++) {
-        if (args[0]->children[i]->type != VALUE_SYMBOL) {
-            return value_new_error("%s: first argument must consist of symbols.", name);
-        }
-    }
+    ASSERT_EXPR_CHILDREN_TYPE(name, args[0], VALUE_SYMBOL, 0);
 
     for (size_t i = 0; i < args[0]->num_children; i++) {
         environment_put(env, args[0]->children[i]->symbol, args[i + 1]);
@@ -302,6 +313,15 @@ static value* builtin_def(value** args, size_t num_args, char* name, environment
     buffer[strlen(buffer) - 1] = '\0';
 
     return value_new_info("variables defined: %s", buffer + 1);
+}
+
+static value* builtin_lambda(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 2);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
+    ASSERT_ARG_TYPE(name, args[1], VALUE_QEXPR, 1);
+    ASSERT_EXPR_CHILDREN_TYPE(name, args[0], VALUE_SYMBOL, 0);
+
+    return value_new_function_lambda(args[0], args[1]);
 }
 
 value* value_evaluate(value* v, environment* env) {
@@ -337,7 +357,7 @@ value* value_evaluate(value* v, environment* env) {
                 value_to_str(v, buffer);
                 result = value_new_error("s-expr %s must start with a function", buffer);
             } else {
-                result = fn->function(temp->children + 1, temp->num_children - 1, fn->symbol, env);
+                result = fn->builtin(temp->children + 1, temp->num_children - 1, fn->symbol, env);
             }
         }
 
@@ -384,4 +404,5 @@ void environment_register_builtins(environment* e) {
 
     // definition builtins
     environment_register_function(e, "def", builtin_def);
+    environment_register_function(e, "lambda", builtin_lambda);
 }
