@@ -258,11 +258,11 @@ static void test_def(parser* p, environment* env) {
     test_str_output(p, env, "some", "{xyz}");
     test_number_output(p, env, "times two pi", 6.28);
     test_error_output(p, env, "arglist", "undefined symbol");
-    test_info_output(p, env, "def {arglist} {a b x y}", "variables defined: arglist");
-    test_str_output(p, env, "arglist", "{a b x y}");
-    test_info_output(p, env, "def arglist 1 2 3 4", "variables defined: a b x y");
-    test_str_output(p, env, "list a b x y", "{1 2 3 4}");
-    test_number_output(p, env, "eval (join {+} (list a b x y))", 10);
+    test_info_output(p, env, "def {arglist} {one two three four}", "variables defined: arglist");
+    test_str_output(p, env, "arglist", "{one two three four}");
+    test_info_output(p, env, "def arglist 1 2 3 4", "variables defined: one two three four");
+    test_str_output(p, env, "list one two three four", "{1 2 3 4}");
+    test_number_output(p, env, "eval (join {+} (list one two three four))", 10);
 
     test_error_output(p, env, "def {a}", "expects at least 2 args");
     test_error_output(p, env, "def 1 2", "arg #0 (1) must be of type q-expr");
@@ -289,6 +289,28 @@ static void test_lambda(parser* p, environment* env) {
     test_error_output(p, env, "lambda {1} {x}", "arg #0 ({1}) must consist of symbol children");
 }
 
+static void test_parent_env(parser* p, environment* env) {
+    environment child;
+    environment* cenv = &child;
+
+    environment_init(cenv);
+    cenv->parent = env;
+
+    test_error_output(p, env, "global-var", "undefined symbol: global-var");
+    test_error_output(p, cenv, "global-var", "undefined symbol: global-var");
+    test_info_output(p, cenv, "def {global-var} 1", "variables defined: global-var");
+    test_number_output(p, env, "global-var", 1);
+    test_number_output(p, cenv, "global-var", 1);
+
+    test_error_output(p, env, "local-var", "undefined symbol: local-var");
+    test_error_output(p, cenv, "local-var", "undefined symbol: local-var");
+    test_info_output(p, cenv, "local {local-var} 1", "variables defined: local-var");
+    test_error_output(p, env, "local-var", "undefined symbol: local-var");
+    test_number_output(p, cenv, "local-var", 1);
+
+    environment_dispose(cenv);
+}
+
 void run_test(parser* p, environment* env) {
     counter = 0;
 
@@ -305,4 +327,5 @@ void run_test(parser* p, environment* env) {
     RUN_TEST_FN(test_init, p, env);
     RUN_TEST_FN(test_def, p, env);
     RUN_TEST_FN(test_lambda, p, env);
+    RUN_TEST_FN(test_parent_env, p, env);
 }

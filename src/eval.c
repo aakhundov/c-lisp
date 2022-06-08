@@ -297,7 +297,7 @@ static value* builtin_init(value** args, size_t num_args, char* name, environmen
     return result;
 }
 
-static value* builtin_def(value** args, size_t num_args, char* name, environment* env) {
+static value* builtin_var(value** args, size_t num_args, char* name, environment* env, int local) {
     ASSERT_MIN_NUM_ARGS(name, num_args, 2);
     ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
     ASSERT_MIN_ARG_LENGTH(name, args[0], 1, 0);
@@ -305,7 +305,7 @@ static value* builtin_def(value** args, size_t num_args, char* name, environment
     ASSERT_EXPR_CHILDREN_TYPE(name, args[0], VALUE_SYMBOL, 0);
 
     for (size_t i = 0; i < args[0]->num_children; i++) {
-        environment_put(env, args[0]->children[i]->symbol, args[i + 1]);
+        environment_put(env, args[0]->children[i]->symbol, args[i + 1], local);
     }
 
     char buffer[1024];
@@ -313,6 +313,14 @@ static value* builtin_def(value** args, size_t num_args, char* name, environment
     buffer[strlen(buffer) - 1] = '\0';
 
     return value_new_info("variables defined: %s", buffer + 1);
+}
+
+static value* builtin_def(value** args, size_t num_args, char* name, environment* env) {
+    return builtin_var(args, num_args, name, env, 0);
+}
+
+static value* builtin_local(value** args, size_t num_args, char* name, environment* env) {
+    return builtin_var(args, num_args, name, env, 1);
 }
 
 static value* builtin_lambda(value** args, size_t num_args, char* name, environment* env) {
@@ -404,5 +412,6 @@ void environment_register_builtins(environment* e) {
 
     // definition builtins
     environment_register_function(e, "def", builtin_def);
+    environment_register_function(e, "local", builtin_local);
     environment_register_function(e, "lambda", builtin_lambda);
 }

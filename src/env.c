@@ -11,6 +11,7 @@ void environment_init(environment* e) {
     e->capacity = 4;
     e->names = malloc(e->capacity * sizeof(char*));
     e->values = malloc(e->capacity * sizeof(value*));
+    e->parent = NULL;
 }
 
 void environment_dispose(environment* e) {
@@ -36,10 +37,20 @@ value* environment_get(environment* e, char* name) {
         }
     }
 
-    return value_new_error("undefined symbol: %s", name);
+    if (e->parent != NULL) {
+        return environment_get(e->parent, name);
+    } else {
+        return value_new_error("undefined symbol: %s", name);
+    }
 }
 
-void environment_put(environment* e, char* name, value* v) {
+void environment_put(environment* e, char* name, value* v, int local) {
+    if (local == 0) {
+        while (e->parent != NULL) {
+            e = e->parent;
+        }
+    }
+
     for (size_t i = 0; i < e->length; i++) {
         if (strcmp(e->names[i], name) == 0) {
             value_dispose(e->values[i]);
@@ -60,13 +71,13 @@ void environment_put(environment* e, char* name, value* v) {
 
 void environment_register_number(environment* e, char* name, double number) {
     value* num = value_new_number(number);
-    environment_put(e, name, num);
+    environment_put(e, name, num, 0);
     value_dispose(num);
 }
 
 void environment_register_function(environment* e, char* name, value_fn function) {
     value* fn = value_new_function_builtin(function, name);
-    environment_put(e, name, fn);
+    environment_put(e, name, fn, 0);
     value_dispose(fn);
 }
 
