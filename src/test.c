@@ -7,12 +7,12 @@
 #include "parse.h"
 #include "value.h"
 
-#define RUN_TEST_FN(fn, p, env)           \
-    {                                     \
-        printf("[%s]\n", #fn);            \
-        printf("====================\n"); \
-        fn(p, env);                       \
-        printf("\n");                     \
+#define RUN_TEST_FN(fn, p, env)                \
+    {                                          \
+        printf("[%s]\n", #fn);                 \
+        printf("=========================\n"); \
+        fn(p, env);                            \
+        printf("\n");                          \
     }
 
 static int counter = 0;
@@ -130,7 +130,6 @@ static void test_str(parser* p, environment* env) {
     test_str_output(p, env, "  ", "()");
     test_str_output(p, env, "+", "<builtin +>");
     test_str_output(p, env, "min", "<builtin min>");
-    test_str_output(p, env, "fake", "error: undefined symbol: fake");
     test_str_output(p, env, "-5", "-5");
     test_str_output(p, env, "(-3.14)", "-3.14");
     test_str_output(p, env, "{}", "{}");
@@ -247,20 +246,20 @@ static void test_init(parser* p, environment* env) {
 
 static void test_def(parser* p, environment* env) {
     test_error_output(p, env, "two", "undefined symbol");
-    test_info_output(p, env, "def {two} 2", "variables defined: two");
+    test_info_output(p, env, "def {two} 2", "defined: two");
     test_str_output(p, env, "two", "2");
     test_error_output(p, env, "pi", "undefined symbol");
     test_error_output(p, env, "times", "undefined symbol");
     test_error_output(p, env, "some", "undefined symbol");
-    test_info_output(p, env, "def {pi times some} 3.14 * {xyz}", "variables defined: pi times some");
+    test_info_output(p, env, "def {pi times some} 3.14 * {xyz}", "defined: pi times some");
     test_str_output(p, env, "pi", "3.14");
     test_str_output(p, env, "times", "<builtin times>");
     test_str_output(p, env, "some", "{xyz}");
     test_number_output(p, env, "times two pi", 6.28);
     test_error_output(p, env, "arglist", "undefined symbol");
-    test_info_output(p, env, "def {arglist} {one two three four}", "variables defined: arglist");
+    test_info_output(p, env, "def {arglist} {one two three four}", "defined: arglist");
     test_str_output(p, env, "arglist", "{one two three four}");
-    test_info_output(p, env, "def arglist 1 2 3 4", "variables defined: one two three four");
+    test_info_output(p, env, "def arglist 1 2 3 4", "defined: one two three four");
     test_str_output(p, env, "list one two three four", "{1 2 3 4}");
     test_number_output(p, env, "eval (join {+} (list one two three four))", 10);
 
@@ -287,28 +286,59 @@ static void test_lambda(parser* p, environment* env) {
     test_error_output(p, env, "lambda {x} 2", "arg #1 (2) must be of type q-expr");
     test_error_output(p, env, "lambda 1 {x}", "arg #0 (1) must be of type q-expr");
     test_error_output(p, env, "lambda {1} {x}", "arg #0 ({1}) must consist of symbol children");
+    test_error_output(p, env, "lambda {x &} {1}", "exactly one argument must follow &");
+    test_error_output(p, env, "lambda {x & y z} {1}", "exactly one argument must follow &");
 }
 
 static void test_parent_env(parser* p, environment* env) {
-    environment child;
-    environment* cenv = &child;
-
-    environment_init(cenv);
-    cenv->parent = env;
+    environment cenv;
+    environment_init(&cenv);
+    cenv.parent = env;
 
     test_error_output(p, env, "global-var", "undefined symbol: global-var");
-    test_error_output(p, cenv, "global-var", "undefined symbol: global-var");
-    test_info_output(p, cenv, "def {global-var} 1", "variables defined: global-var");
+    test_error_output(p, &cenv, "global-var", "undefined symbol: global-var");
+    test_info_output(p, &cenv, "def {global-var} 1", "defined: global-var");
     test_number_output(p, env, "global-var", 1);
-    test_number_output(p, cenv, "global-var", 1);
+    test_number_output(p, &cenv, "global-var", 1);
 
     test_error_output(p, env, "local-var", "undefined symbol: local-var");
-    test_error_output(p, cenv, "local-var", "undefined symbol: local-var");
-    test_info_output(p, cenv, "local {local-var} 1", "variables defined: local-var");
+    test_error_output(p, &cenv, "local-var", "undefined symbol: local-var");
+    test_info_output(p, &cenv, "local {local-var} 1", "defined: local-var");
     test_error_output(p, env, "local-var", "undefined symbol: local-var");
-    test_number_output(p, cenv, "local-var", 1);
+    test_number_output(p, &cenv, "local-var", 1);
 
-    environment_dispose(cenv);
+    environment_dispose(&cenv);
+}
+
+static void test_function_call(parser* p, environment* env) {
+    test_info_output(p, env, "def {fn-negate} (lambda {x} {- x})", "defined: fn-negate");
+    test_info_output(p, env, "def {fn-restore} (lambda {x} {- (fn-negate x)})", "defined: fn-restore");
+    test_info_output(p, env, "def {fn-add} (lambda {x y z} {+ x y z})", "defined: fn-add");
+    test_info_output(p, env, "def {fn-add-mul} (lambda {x y} {+ x (* x y)})", "defined: fn-add-mul");
+    test_info_output(p, env, "def {fn-pack} (lambda {x & y} {join (list x) y})", "defined: fn-pack");
+    test_info_output(p, env, "def {fn-curry} (lambda {f args} {eval (join (list f) args)})", "defined: fn-curry");
+    test_info_output(p, env, "def {fn-uncurry} (lambda {f & args} {f args})", "defined: fn-uncurry");
+    test_info_output(p, env, "def {fn-wrong} (lambda {x} {+ x y})", "defined: fn-wrong");
+
+    test_number_output(p, env, "fn-negate 1", -1);
+    test_number_output(p, env, "fn-negate -3.14", 3.14);
+    test_number_output(p, env, "fn-restore -3.14", -3.14);
+    test_number_output(p, env, "fn-add 1 2 3", 6);
+    test_number_output(p, env, "fn-add 0 0 0", 0);
+    test_number_output(p, env, "fn-add-mul 10 20", 210);
+    test_number_output(p, env, "fn-add-mul -7 5", -42);
+    test_str_output(p, env, "fn-pack 1", "{1}");
+    test_str_output(p, env, "fn-pack 1 2 3", "{1 2 3}");
+    test_number_output(p, env, "fn-curry + {1 2 3}", 6);
+    test_number_output(p, env, "fn-curry * {10 20}", 200);
+    test_str_output(p, env, "fn-uncurry head 1 2 3", "{1}");
+    test_number_output(p, env, "fn-uncurry len 1 2 3", 3);
+    test_str_output(p, env, "fn-uncurry tail 1", "{}");
+
+    test_error_output(p, env, "fn-negate 1 2", "expects exactly 1 arg");
+    test_error_output(p, env, "fn-add 1 2", "expects exactly 3 args");
+    test_error_output(p, env, "fn-add 1 2 3 4", "expects exactly 3 args");
+    test_error_output(p, env, "fn-wrong 1", "undefined symbol: y");
 }
 
 void run_test(parser* p, environment* env) {
@@ -328,4 +358,5 @@ void run_test(parser* p, environment* env) {
     RUN_TEST_FN(test_def, p, env);
     RUN_TEST_FN(test_lambda, p, env);
     RUN_TEST_FN(test_parent_env, p, env);
+    RUN_TEST_FN(test_function_call, p, env);
 }

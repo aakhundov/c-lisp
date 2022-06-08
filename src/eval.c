@@ -318,7 +318,7 @@ static value* builtin_var(value** args, size_t num_args, char* name, environment
     value_to_str(args[0], buffer);
     buffer[strlen(buffer) - 1] = '\0';
 
-    return value_new_info("variables defined: %s", buffer + 1);
+    return value_new_info("defined: %s", buffer + 1);
 }
 
 static value* builtin_def(value** args, size_t num_args, char* name, environment* env) {
@@ -335,7 +335,49 @@ static value* builtin_lambda(value** args, size_t num_args, char* name, environm
     ASSERT_ARG_TYPE(name, args[1], VALUE_QEXPR, 1);
     ASSERT_EXPR_CHILDREN_TYPE(name, args[0], VALUE_SYMBOL, 0);
 
+    if (args[0]->num_children > 1 && strcmp(args[0]->children[1]->symbol, "&") == 0) {
+        if (args[0]->num_children != 3) {
+            return value_new_error("exactly one argument must follow &");
+        }
+    }
+
     return value_new_function_lambda(args[0], args[1]);
+}
+
+static value* call_lambda(value* lambda, value** args, size_t num_args, environment* env) {
+    char* name = (lambda->symbol != NULL) ? lambda->symbol : "lambda";
+
+    if (lambda->args->num_children > 1 && strcmp(lambda->args->children[1]->symbol, "&") == 0) {
+        ASSERT_MIN_NUM_ARGS(name, num_args, 1);
+    } else {
+        ASSERT_NUM_ARGS(name, num_args, lambda->args->num_children);
+    }
+
+    environment local;
+    environment_init(&local);
+    local.parent = env;
+
+    if (lambda->args->num_children > 1 && strcmp(lambda->args->children[1]->symbol, "&") == 0) {
+        value* rest = value_new_qexpr();
+        for (size_t i = 1; i < num_args; i++) {
+            value_add_child(rest, value_copy(args[i]));
+        }
+
+        environment_put(&local, lambda->args->children[0]->symbol, args[0], 1);
+        environment_put(&local, lambda->args->children[2]->symbol, rest, 1);
+
+        value_dispose(rest);
+    } else {
+        for (size_t i = 0; i < lambda->args->num_children; i++) {
+            environment_put(&local, lambda->args->children[i]->symbol, args[i], 1);
+        }
+    }
+
+    value* result = builtin_eval(&lambda->body, 1, name, &local);
+
+    environment_dispose(&local);
+
+    return result;
 }
 
 value* value_evaluate(value* v, environment* env) {
@@ -371,7 +413,11 @@ value* value_evaluate(value* v, environment* env) {
                 value_to_str(v, buffer);
                 result = value_new_error("s-expr %s must start with a function", buffer);
             } else {
-                result = fn->builtin(temp->children + 1, temp->num_children - 1, fn->symbol, env);
+                if (fn->builtin != NULL) {
+                    result = fn->builtin(temp->children + 1, temp->num_children - 1, fn->symbol, env);
+                } else {
+                    result = call_lambda(fn, temp->children + 1, temp->num_children - 1, env);
+                }
             }
         }
 

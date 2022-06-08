@@ -258,17 +258,13 @@ static int function_to_str(value* v, char* buffer) {
     if (v->builtin != NULL) {
         return sprintf(buffer, "<builtin %s>", v->symbol);
     } else {
-        if (v->symbol != NULL) {
-            return sprintf(buffer, "<function %s>", v->symbol);
-        } else {
-            char args_buffer[1024];
-            char body_buffer[1024];
+        char args_buffer[1024];
+        char body_buffer[1024];
 
-            value_to_str(v->args, args_buffer);
-            value_to_str(v->body, body_buffer);
+        value_to_str(v->args, args_buffer);
+        value_to_str(v->body, body_buffer);
 
-            return sprintf(buffer, "<lambda %s %s>", args_buffer, body_buffer);
-        }
+        return sprintf(buffer, "<lambda %s %s>", args_buffer, body_buffer);
     }
 }
 
@@ -279,9 +275,9 @@ int value_to_str(value* v, char* buffer) {
         case VALUE_SYMBOL:
             return sprintf(buffer, "%s", v->symbol);
         case VALUE_ERROR:
-            return sprintf(buffer, "error: %s", v->symbol);
+            return sprintf(buffer, "\x1B[31m%s\x1B[0m", v->symbol);
         case VALUE_INFO:
-            return sprintf(buffer, "info: %s", v->symbol);
+            return sprintf(buffer, "\x1B[32m%s\x1B[0m", v->symbol);
         case VALUE_FUNCTION:
             return function_to_str(v, buffer);
         case VALUE_SEXPR:
