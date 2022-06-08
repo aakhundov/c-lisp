@@ -306,6 +306,10 @@ static value* builtin_var(value** args, size_t num_args, char* name, environment
 
     for (size_t i = 0; i < args[0]->num_children; i++) {
         if (args[i + 1]->type == VALUE_FUNCTION) {
+            if (args[i + 1]->symbol != NULL) {
+                free(args[i + 1]->symbol);
+            }
+
             // add symbol to the defined (lambda) function on the fly
             args[i + 1]->symbol = malloc(strlen(args[0]->children[i]->symbol) + 1);
             strcpy(args[i + 1]->symbol, args[0]->children[i]->symbol);
