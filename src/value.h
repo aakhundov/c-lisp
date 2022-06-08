@@ -23,7 +23,7 @@ struct value {
     double number;
     char* symbol;
     value_fn builtin;
-    value* formals;
+    value* args;
     value* body;
     value** children;
     size_t num_children;
@@ -34,8 +34,9 @@ value* value_new_number(double number);
 value* value_new_symbol(char* symbol);
 value* value_new_error(char* error, ...);
 value* value_new_info(char* error, ...);
+value* value_new_function(value* function);
 value* value_new_function_builtin(value_fn builtin, char* symbol);
-value* value_new_function_lambda(value* formals, value* body);
+value* value_new_function_lambda(value* args, value* body);
 value* value_new_sexpr();
 value* value_new_qexpr();
 

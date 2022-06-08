@@ -61,7 +61,7 @@ value* value_new_function_builtin(value_fn builtin, char* symbol) {
     v->type = VALUE_FUNCTION;
     v->builtin = builtin;
     v->symbol = malloc(strlen(symbol) + 1);
-    v->formals = NULL;
+    v->args = NULL;
     v->body = NULL;
 
     strcpy(v->symbol, symbol);
@@ -69,8 +69,8 @@ value* value_new_function_builtin(value_fn builtin, char* symbol) {
     return v;
 }
 
-value* value_new_function_lambda(value* formals, value* body) {
-    assert(formals->type == VALUE_QEXPR);
+value* value_new_function_lambda(value* args, value* body) {
+    assert(args->type == VALUE_QEXPR);
     assert(body->type == VALUE_QEXPR);
 
     value* v = malloc(sizeof(value));
@@ -78,10 +78,28 @@ value* value_new_function_lambda(value* formals, value* body) {
     v->type = VALUE_FUNCTION;
     v->builtin = NULL;
     v->symbol = NULL;
-    v->formals = value_copy(formals);
+    v->args = value_copy(args);
     v->body = value_copy(body);
 
     return v;
+}
+
+value* value_new_function(value* function) {
+    assert(function->type == VALUE_FUNCTION);
+
+    value* result = NULL;
+    if (function->builtin != NULL) {
+        result = value_new_function_builtin(function->builtin, function->symbol);
+    } else {
+        result = value_new_function_lambda(function->args, function->body);
+
+        if (function->symbol != NULL) {
+            result->symbol = malloc(strlen(function->symbol) + 1);
+            strcpy(result->symbol, function->symbol);
+        }
+    }
+
+    return result;
 }
 
 static value* value_new_expr(value_type type) {
@@ -116,8 +134,11 @@ void value_dispose(value* v) {
             if (v->builtin != NULL) {
                 free(v->symbol);
             } else {
-                value_dispose(v->formals);
+                value_dispose(v->args);
                 value_dispose(v->body);
+                if (v->symbol != NULL) {
+                    free(v->symbol);
+                }
             }
             break;
         case VALUE_SEXPR:
@@ -201,11 +222,7 @@ value* value_copy(value* v) {
             result = value_new_info(v->symbol);
             break;
         case VALUE_FUNCTION:
-            if (v->builtin != NULL) {
-                result = value_new_function_builtin(v->builtin, v->symbol);
-            } else {
-                result = value_new_function_lambda(v->formals, v->body);
-            }
+            result = value_new_function(v);
             break;
         case VALUE_SEXPR:
         case VALUE_QEXPR:
@@ -237,14 +254,22 @@ static int expr_to_str(value* v, char* buffer, char open, char close) {
     return running - buffer;
 }
 
-static int lambda_to_str(value* v, char* buffer) {
-    char formals_buffer[1024];
-    char body_buffer[1024];
+static int function_to_str(value* v, char* buffer) {
+    if (v->builtin != NULL) {
+        return sprintf(buffer, "<builtin %s>", v->symbol);
+    } else {
+        if (v->symbol != NULL) {
+            return sprintf(buffer, "<function %s>", v->symbol);
+        } else {
+            char args_buffer[1024];
+            char body_buffer[1024];
 
-    value_to_str(v->formals, formals_buffer);
-    value_to_str(v->body, body_buffer);
+            value_to_str(v->args, args_buffer);
+            value_to_str(v->body, body_buffer);
 
-    return sprintf(buffer, "<lambda %s %s>", formals_buffer, body_buffer);
+            return sprintf(buffer, "<lambda %s %s>", args_buffer, body_buffer);
+        }
+    }
 }
 
 int value_to_str(value* v, char* buffer) {
@@ -258,11 +283,7 @@ int value_to_str(value* v, char* buffer) {
         case VALUE_INFO:
             return sprintf(buffer, "info: %s", v->symbol);
         case VALUE_FUNCTION:
-            if (v->builtin != NULL) {
-                return sprintf(buffer, "<builtin %s>", v->symbol);
-            } else {
-                return lambda_to_str(v, buffer);
-            }
+            return function_to_str(v, buffer);
         case VALUE_SEXPR:
             return expr_to_str(v, buffer, '(', ')');
         case VALUE_QEXPR:
@@ -346,7 +367,7 @@ value* value_equals(value* v1, value* v2) {
                 if (v1->builtin != NULL && v1->builtin != NULL) {
                     result = value_new_number(v1->builtin == v2->builtin ? 1 : 0);
                 } else if (v1->builtin == NULL && v1->builtin == NULL) {
-                    sub_result = value_equals(v1->formals, v2->formals);
+                    sub_result = value_equals(v1->args, v2->args);
                     if (sub_result->type == VALUE_ERROR || sub_result->number == 0) {
                         result = sub_result;
                     } else {

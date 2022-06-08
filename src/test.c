@@ -254,7 +254,7 @@ static void test_def(parser* p, environment* env) {
     test_error_output(p, env, "some", "undefined symbol");
     test_info_output(p, env, "def {pi times some} 3.14 * {xyz}", "variables defined: pi times some");
     test_str_output(p, env, "pi", "3.14");
-    test_str_output(p, env, "times", "<builtin *>");
+    test_str_output(p, env, "times", "<builtin times>");
     test_str_output(p, env, "some", "{xyz}");
     test_number_output(p, env, "times two pi", 6.28);
     test_error_output(p, env, "arglist", "undefined symbol");
