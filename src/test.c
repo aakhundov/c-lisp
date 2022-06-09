@@ -75,7 +75,17 @@ static void test_info_output(parser* p, environment* env, char* input, char* exp
     }
 }
 
-static void test_str_output(parser* p, environment* env, char* input, char* expected) {
+static void test_bool_output(parser* p, environment* env, char* input, int expected) {
+    value* e = get_evaluated(p, env, input);
+
+    if (e != NULL) {
+        assert(e->type == VALUE_BOOL);
+        assert(e->number == expected);
+        value_dispose(e);
+    }
+}
+
+static void test_full_output(parser* p, environment* env, char* input, char* expected) {
     value* e = get_evaluated(p, env, input);
 
     if (e != NULL) {
@@ -130,38 +140,45 @@ static void test_errors(parser* p, environment* env) {
 }
 
 static void test_str(parser* p, environment* env) {
-    test_str_output(p, env, "", "()");
-    test_str_output(p, env, "  ", "()");
-    test_str_output(p, env, "+", "<builtin +>");
-    test_str_output(p, env, "min", "<builtin min>");
-    test_str_output(p, env, "-5", "-5");
-    test_str_output(p, env, "(-3.14)", "-3.14");
-    test_str_output(p, env, "{}", "{}");
-    test_str_output(p, env, "{1}", "{1}");
-    test_str_output(p, env, "{1 2 3}", "{1 2 3}");
-    test_str_output(p, env, "{+ 1 2 3}", "{+ 1 2 3}");
-    test_str_output(p, env, "{1 2 3 +}", "{1 2 3 +}");
-    test_str_output(p, env, "{+ 1 2 3 {- 4 5} 6}", "{+ 1 2 3 {- 4 5} 6}");
-    test_str_output(p, env, "{+ 1 2 3 (- 4 5) 6}", "{+ 1 2 3 (- 4 5) 6}");
+    test_full_output(p, env, "", "()");
+    test_full_output(p, env, "  ", "()");
+    test_full_output(p, env, "+", "<builtin +>");
+    test_full_output(p, env, "min", "<builtin min>");
+    test_full_output(p, env, "-5", "-5");
+    test_full_output(p, env, "(-3.14)", "-3.14");
+    test_full_output(p, env, "{}", "{}");
+    test_full_output(p, env, "{1}", "{1}");
+    test_full_output(p, env, "{1 2 3}", "{1 2 3}");
+    test_full_output(p, env, "{+ 1 2 3}", "{+ 1 2 3}");
+    test_full_output(p, env, "{1 2 3 +}", "{1 2 3 +}");
+    test_full_output(p, env, "{+ 1 2 3 {- 4 5} 6}", "{+ 1 2 3 {- 4 5} 6}");
+    test_full_output(p, env, "{+ 1 2 3 (- 4 5) 6}", "{+ 1 2 3 (- 4 5) 6}");
+}
+
+static void test_bool(parser* p, environment* env) {
+    test_bool_output(p, env, "#true", 1);
+    test_bool_output(p, env, "#false", 0);
+    test_full_output(p, env, "#true", "#true");
+    test_full_output(p, env, "#false", "#false");
 }
 
 static void test_list(parser* p, environment* env) {
-    test_str_output(p, env, "list 1 2 3", "{1 2 3}");
-    test_str_output(p, env, "list {1 2 3}", "{{1 2 3}}");
-    test_str_output(p, env, "list + - * /", "{<builtin +> <builtin -> <builtin *> <builtin />}");
-    test_str_output(p, env, "list 0", "{0}");
-    test_str_output(p, env, "list", "<builtin list>");
-    test_str_output(p, env, "list list", "{<builtin list>}");
-    test_str_output(p, env, "(list 1 2 3)", "{1 2 3}");
-    test_str_output(p, env, "{list 1 2 3}", "{list 1 2 3}");
+    test_full_output(p, env, "list 1 2 3", "{1 2 3}");
+    test_full_output(p, env, "list {1 2 3}", "{{1 2 3}}");
+    test_full_output(p, env, "list + - * /", "{<builtin +> <builtin -> <builtin *> <builtin />}");
+    test_full_output(p, env, "list 0", "{0}");
+    test_full_output(p, env, "list", "<builtin list>");
+    test_full_output(p, env, "list list", "{<builtin list>}");
+    test_full_output(p, env, "(list 1 2 3)", "{1 2 3}");
+    test_full_output(p, env, "{list 1 2 3}", "{list 1 2 3}");
 }
 
 static void test_first(parser* p, environment* env) {
     test_number_output(p, env, "first {1 2 3}", 1);
-    test_str_output(p, env, "first {1}", "1");
-    test_str_output(p, env, "first {+ 1 2 3}", "+");
-    test_str_output(p, env, "first {{+ 1} {2 3}}", "{+ 1}");
-    test_str_output(p, env, "first {(+ 1) {2 3}}", "(+ 1)");
+    test_full_output(p, env, "first {1}", "1");
+    test_full_output(p, env, "first {+ 1 2 3}", "+");
+    test_full_output(p, env, "first {{+ 1} {2 3}}", "{+ 1}");
+    test_full_output(p, env, "first {(+ 1) {2 3}}", "(+ 1)");
 
     test_error_output(p, env, "first 1", "arg #0 (1) must be of type q-expr");
     test_error_output(p, env, "first {}", "arg #0 ({}) must be at least 1-long");
@@ -169,11 +186,11 @@ static void test_first(parser* p, environment* env) {
 }
 
 static void test_head(parser* p, environment* env) {
-    test_str_output(p, env, "head {1 2 3}", "{1}");
-    test_str_output(p, env, "head {1}", "{1}");
-    test_str_output(p, env, "head {+}", "{+}");
-    test_str_output(p, env, "head {+ + + -}", "{+}");
-    test_str_output(p, env, "head {head + + + -}", "{head}");
+    test_full_output(p, env, "head {1 2 3}", "{1}");
+    test_full_output(p, env, "head {1}", "{1}");
+    test_full_output(p, env, "head {+}", "{+}");
+    test_full_output(p, env, "head {+ + + -}", "{+}");
+    test_full_output(p, env, "head {head + + + -}", "{head}");
 
     test_error_output(p, env, "head 1", "arg #0 (1) must be of type q-expr");
     test_error_output(p, env, "head {}", "arg #0 ({}) must be at least 1-long");
@@ -181,12 +198,12 @@ static void test_head(parser* p, environment* env) {
 }
 
 static void test_tail(parser* p, environment* env) {
-    test_str_output(p, env, "tail {1}", "{}");
-    test_str_output(p, env, "tail {1 2 3}", "{2 3}");
-    test_str_output(p, env, "tail {+}", "{}");
-    test_str_output(p, env, "tail {+ 1}", "{1}");
-    test_str_output(p, env, "tail {1 + 2 -}", "{+ 2 -}");
-    test_str_output(p, env, "tail {tail tail tail}", "{tail tail}");
+    test_full_output(p, env, "tail {1}", "{}");
+    test_full_output(p, env, "tail {1 2 3}", "{2 3}");
+    test_full_output(p, env, "tail {+}", "{}");
+    test_full_output(p, env, "tail {+ 1}", "{1}");
+    test_full_output(p, env, "tail {1 + 2 -}", "{+ 2 -}");
+    test_full_output(p, env, "tail {tail tail tail}", "{tail tail}");
 
     test_error_output(p, env, "tail 2", "arg #0 (2) must be of type q-expr");
     test_error_output(p, env, "tail {}", "arg #0 ({}) must be at least 1-long");
@@ -194,12 +211,12 @@ static void test_tail(parser* p, environment* env) {
 }
 
 static void test_join(parser* p, environment* env) {
-    test_str_output(p, env, "join {}", "{}");
-    test_str_output(p, env, "join {} {}", "{}");
-    test_str_output(p, env, "join {} {} {}", "{}");
-    test_str_output(p, env, "join {1} {2}", "{1 2}");
-    test_str_output(p, env, "join {1} {2 3} {(4 5) /}", "{1 2 3 (4 5) /}");
-    test_str_output(p, env, "join {1} {2 3} {(4 5) /} {}", "{1 2 3 (4 5) /}");
+    test_full_output(p, env, "join {}", "{}");
+    test_full_output(p, env, "join {} {}", "{}");
+    test_full_output(p, env, "join {} {} {}", "{}");
+    test_full_output(p, env, "join {1} {2}", "{1 2}");
+    test_full_output(p, env, "join {1} {2 3} {(4 5) /}", "{1 2 3 (4 5) /}");
+    test_full_output(p, env, "join {1} {2 3} {(4 5) /} {}", "{1 2 3 (4 5) /}");
 
     test_error_output(p, env, "join {1} {2 3} 5 {(4 5) /} {}", "arg #2 (5) must be of type q-expr");
     test_error_output(p, env, "join 1 2 3", "arg #0 (1) must be of type q-expr");
@@ -207,13 +224,13 @@ static void test_join(parser* p, environment* env) {
 
 static void test_eval(parser* p, environment* env) {
     test_number_output(p, env, "eval {+ 1 2 3}", 6);
-    test_str_output(p, env, "eval {}", "()");
-    test_str_output(p, env, "eval {+}", "<builtin +>");
-    test_str_output(p, env, "eval {list {1 2 3}}", "{{1 2 3}}");
-    test_str_output(p, env, "eval {list 1 2 3} ", "{1 2 3}");
-    test_str_output(p, env, "eval {eval {list + 2 3}}", "{<builtin +> 2 3}");
-    test_str_output(p, env, "eval {head (list 1 2 3 4)}", "{1}");
-    test_str_output(p, env, "eval (tail {tail tail {5 6 7}})", "{6 7}");
+    test_full_output(p, env, "eval {}", "()");
+    test_full_output(p, env, "eval {+}", "<builtin +>");
+    test_full_output(p, env, "eval {list {1 2 3}}", "{{1 2 3}}");
+    test_full_output(p, env, "eval {list 1 2 3} ", "{1 2 3}");
+    test_full_output(p, env, "eval {eval {list + 2 3}}", "{<builtin +> 2 3}");
+    test_full_output(p, env, "eval {head (list 1 2 3 4)}", "{1}");
+    test_full_output(p, env, "eval (tail {tail tail {5 6 7}})", "{6 7}");
     test_number_output(p, env, "eval (head {(+ 1 2) (+ 10 20)})", 3);
     test_number_output(p, env, "eval (eval {list + 2 3})", 5);
 
@@ -222,13 +239,13 @@ static void test_eval(parser* p, environment* env) {
 }
 
 static void test_cons(parser* p, environment* env) {
-    test_str_output(p, env, "cons 1 {}", "{1}");
-    test_str_output(p, env, "cons 1 {2 3}", "{1 2 3}");
-    test_str_output(p, env, "cons {1} {2 3}", "{{1} 2 3}");
-    test_str_output(p, env, "cons + {1 2 3}", "{<builtin +> 1 2 3}");
+    test_full_output(p, env, "cons 1 {}", "{1}");
+    test_full_output(p, env, "cons 1 {2 3}", "{1 2 3}");
+    test_full_output(p, env, "cons {1} {2 3}", "{{1} 2 3}");
+    test_full_output(p, env, "cons + {1 2 3}", "{<builtin +> 1 2 3}");
     test_number_output(p, env, "eval (cons + {1 2 3})", 6);
-    test_str_output(p, env, "cons", "<builtin cons>");
-    test_str_output(p, env, "cons {} {}", "{{}}");
+    test_full_output(p, env, "cons", "<builtin cons>");
+    test_full_output(p, env, "cons {} {}", "{{}}");
 
     test_error_output(p, env, "cons 1", "expects exactly 2 args");
     test_error_output(p, env, "cons {}", "expects exactly 2 args");
@@ -249,11 +266,11 @@ static void test_len(parser* p, environment* env) {
 }
 
 static void test_init(parser* p, environment* env) {
-    test_str_output(p, env, "init {1}", "{}");
-    test_str_output(p, env, "init {1 2 3}", "{1 2}");
-    test_str_output(p, env, "init {{1} {2 3} {4}}", "{{1} {2 3}}");
-    test_str_output(p, env, "init {{1} (+ 2 3) {4}}", "{{1} (+ 2 3)}");
-    test_str_output(p, env, "init {+ - * /}", "{+ - *}");
+    test_full_output(p, env, "init {1}", "{}");
+    test_full_output(p, env, "init {1 2 3}", "{1 2}");
+    test_full_output(p, env, "init {{1} {2 3} {4}}", "{{1} {2 3}}");
+    test_full_output(p, env, "init {{1} (+ 2 3) {4}}", "{{1} (+ 2 3)}");
+    test_full_output(p, env, "init {+ - * /}", "{+ - *}");
 
     test_error_output(p, env, "init {}", "arg #0 ({}) must be at least 1-long");
     test_error_output(p, env, "init 1", "arg #0 (1) must be of type q-expr");
@@ -263,20 +280,20 @@ static void test_init(parser* p, environment* env) {
 static void test_def(parser* p, environment* env) {
     test_error_output(p, env, "two", "undefined symbol");
     test_info_output(p, env, "def {two} 2", "defined: two");
-    test_str_output(p, env, "two", "2");
+    test_full_output(p, env, "two", "2");
     test_error_output(p, env, "pi", "undefined symbol");
     test_error_output(p, env, "times", "undefined symbol");
     test_error_output(p, env, "some", "undefined symbol");
     test_info_output(p, env, "def {pi times some} 3.14 * {xyz}", "defined: pi times some");
-    test_str_output(p, env, "pi", "3.14");
-    test_str_output(p, env, "times", "<builtin times>");
-    test_str_output(p, env, "some", "{xyz}");
+    test_full_output(p, env, "pi", "3.14");
+    test_full_output(p, env, "times", "<builtin times>");
+    test_full_output(p, env, "some", "{xyz}");
     test_number_output(p, env, "times two pi", 6.28);
     test_error_output(p, env, "arglist", "undefined symbol");
     test_info_output(p, env, "def {arglist} {one two three four}", "defined: arglist");
-    test_str_output(p, env, "arglist", "{one two three four}");
+    test_full_output(p, env, "arglist", "{one two three four}");
     test_info_output(p, env, "def arglist 1 2 3 4", "defined: one two three four");
-    test_str_output(p, env, "list one two three four", "{1 2 3 4}");
+    test_full_output(p, env, "list one two three four", "{1 2 3 4}");
     test_number_output(p, env, "eval (join {+} (list one two three four))", 10);
 
     test_error_output(p, env, "def {a}", "expects at least 2 args");
@@ -290,10 +307,10 @@ static void test_def(parser* p, environment* env) {
 }
 
 static void test_lambda(parser* p, environment* env) {
-    test_str_output(p, env, "lambda", "<builtin lambda>");
-    test_str_output(p, env, "lambda {x} {x}", "<lambda {x} {x}>");
-    test_str_output(p, env, "lambda {} {x}", "<lambda {} {x}>");
-    test_str_output(p, env, "lambda {x y} {+ x y}", "<lambda {x y} {+ x y}>");
+    test_full_output(p, env, "lambda", "<builtin lambda>");
+    test_full_output(p, env, "lambda {x} {x}", "<lambda {x} {x}>");
+    test_full_output(p, env, "lambda {} {x}", "<lambda {} {x}>");
+    test_full_output(p, env, "lambda {x y} {+ x y}", "<lambda {x y} {+ x y}>");
 
     test_error_output(p, env, "lambda 1", "expects exactly 2 args");
     test_error_output(p, env, "lambda {x}", "expects exactly 2 args");
@@ -343,13 +360,13 @@ static void test_function_call(parser* p, environment* env) {
     test_number_output(p, env, "fn-add 0 0 0", 0);
     test_number_output(p, env, "fn-add-mul 10 20", 210);
     test_number_output(p, env, "fn-add-mul -7 5", -42);
-    test_str_output(p, env, "fn-pack 1", "{1}");
-    test_str_output(p, env, "fn-pack 1 2 3", "{1 2 3}");
+    test_full_output(p, env, "fn-pack 1", "{1}");
+    test_full_output(p, env, "fn-pack 1 2 3", "{1 2 3}");
     test_number_output(p, env, "fn-curry + {1 2 3}", 6);
     test_number_output(p, env, "fn-curry * {10 20}", 200);
-    test_str_output(p, env, "fn-uncurry head 1 2 3", "{1}");
+    test_full_output(p, env, "fn-uncurry head 1 2 3", "{1}");
     test_number_output(p, env, "fn-uncurry len 1 2 3", 3);
-    test_str_output(p, env, "fn-uncurry tail 1", "{}");
+    test_full_output(p, env, "fn-uncurry tail 1", "{}");
 
     test_error_output(p, env, "fn-negate 1 2", "expects exactly 1 arg");
     test_error_output(p, env, "fn-add 1 2", "expects exactly 3 args");
@@ -374,13 +391,13 @@ static void test_fn(parser* p, environment* env) {
     test_number_output(p, env, "fx-add 0 0 0", 0);
     test_number_output(p, env, "fx-add-mul 10 20", 210);
     test_number_output(p, env, "fx-add-mul -7 5", -42);
-    test_str_output(p, env, "fx-pack 1", "{1}");
-    test_str_output(p, env, "fx-pack 1 2 3", "{1 2 3}");
+    test_full_output(p, env, "fx-pack 1", "{1}");
+    test_full_output(p, env, "fx-pack 1 2 3", "{1 2 3}");
     test_number_output(p, env, "fx-curry + {1 2 3}", 6);
     test_number_output(p, env, "fx-curry * {10 20}", 200);
-    test_str_output(p, env, "fx-uncurry head 1 2 3", "{1}");
+    test_full_output(p, env, "fx-uncurry head 1 2 3", "{1}");
     test_number_output(p, env, "fx-uncurry len 1 2 3", 3);
-    test_str_output(p, env, "fx-uncurry tail 1", "{}");
+    test_full_output(p, env, "fx-uncurry tail 1", "{}");
 
     test_error_output(p, env, "fx-negate 1 2", "expects exactly 1 arg");
     test_error_output(p, env, "fx-add 1 2", "expects exactly 3 args");
@@ -405,6 +422,7 @@ void run_test(parser* p) {
     RUN_TEST_FN(test_numeric, p);
     RUN_TEST_FN(test_errors, p);
     RUN_TEST_FN(test_str, p);
+    RUN_TEST_FN(test_bool, p);
     RUN_TEST_FN(test_list, p);
     RUN_TEST_FN(test_first, p);
     RUN_TEST_FN(test_head, p);

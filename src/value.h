@@ -8,9 +8,10 @@ typedef enum {
     VALUE_SYMBOL = 1,
     VALUE_ERROR = 2,
     VALUE_INFO = 3,
-    VALUE_FUNCTION = 4,
-    VALUE_SEXPR = 5,
-    VALUE_QEXPR = 6
+    VALUE_BOOL = 4,
+    VALUE_FUNCTION = 5,
+    VALUE_SEXPR = 6,
+    VALUE_QEXPR = 7
 } value_type;
 
 typedef struct value value;
@@ -34,6 +35,7 @@ value* value_new_number(double number);
 value* value_new_symbol(char* symbol);
 value* value_new_error(char* error, ...);
 value* value_new_info(char* error, ...);
+value* value_new_bool(int truth);
 value* value_new_function(value* function);
 value* value_new_function_builtin(value_fn builtin, char* symbol);
 value* value_new_function_lambda(value* args, value* body);

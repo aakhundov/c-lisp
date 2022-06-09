@@ -55,6 +55,15 @@ value* value_new_info(char* info, ...) {
     return v;
 }
 
+value* value_new_bool(int truth) {
+    value* v = malloc(sizeof(value));
+
+    v->type = VALUE_BOOL;
+    v->number = truth;
+
+    return v;
+}
+
 value* value_new_function_builtin(value_fn builtin, char* symbol) {
     value* v = malloc(sizeof(value));
 
@@ -130,6 +139,8 @@ void value_dispose(value* v) {
         case VALUE_INFO:
             free(v->symbol);
             break;
+        case VALUE_BOOL:
+            break;
         case VALUE_FUNCTION:
             if (v->builtin != NULL) {
                 free(v->symbol);
@@ -179,6 +190,8 @@ value* value_from_tree(tree* t) {
         }
     } else if (strstr(t->tag, "symbol")) {
         return value_new_symbol(t->content);
+    } else if (strstr(t->tag, "bool")) {
+        return value_new_bool((strcmp(t->content, "#true") == 0) ? 1 : 0);
     } else {
         value* expr = NULL;
         if (strcmp(t->tag, ">") == 0 || strstr(t->tag, "sexpr")) {
@@ -220,6 +233,9 @@ value* value_copy(value* v) {
             break;
         case VALUE_INFO:
             result = value_new_info(v->symbol);
+            break;
+        case VALUE_BOOL:
+            result = value_new_bool(v->number);
             break;
         case VALUE_FUNCTION:
             result = value_new_function(v);
@@ -278,6 +294,8 @@ int value_to_str(value* v, char* buffer) {
             return sprintf(buffer, "\x1B[31m%s\x1B[0m", v->symbol);
         case VALUE_INFO:
             return sprintf(buffer, "\x1B[32m%s\x1B[0m", v->symbol);
+        case VALUE_BOOL:
+            return sprintf(buffer, "%s", (v->number == 1) ? "#true" : "#false");
         case VALUE_FUNCTION:
             return function_to_str(v, buffer);
         case VALUE_SEXPR:
@@ -314,6 +332,7 @@ value* value_compare(value* v1, value* v2) {
                 result = value_new_number(strcmp(v1->symbol, v2->symbol));
             case VALUE_ERROR:
             case VALUE_INFO:
+            case VALUE_BOOL:
             case VALUE_FUNCTION:
                 result = value_new_error("incomprable type: %s", get_value_type_name(v1->type));
             case VALUE_SEXPR:
@@ -348,20 +367,22 @@ value* value_equals(value* v1, value* v2) {
     value* result = NULL;
 
     if (v1->type != v2->type) {
-        result = value_new_number(0);
+        result = value_new_bool(0);
     } else {
         value* sub_result;
 
         switch (v1->type) {
             case VALUE_NUMBER:
-                result = value_new_number(v1->number == v2->number ? 1 : 0);
+                result = value_new_bool(v1->number == v2->number ? 1 : 0);
             case VALUE_SYMBOL:
             case VALUE_ERROR:
             case VALUE_INFO:
-                result = value_new_number(strcmp(v1->symbol, v2->symbol) == 0 ? 1 : 0);
+                result = value_new_bool(strcmp(v1->symbol, v2->symbol) == 0 ? 1 : 0);
+            case VALUE_BOOL:
+                result = value_new_bool(v1->number == v2->number ? 1 : 0);
             case VALUE_FUNCTION:
                 if (v1->builtin != NULL && v1->builtin != NULL) {
-                    result = value_new_number(v1->builtin == v2->builtin ? 1 : 0);
+                    result = value_new_bool(v1->builtin == v2->builtin ? 1 : 0);
                 } else if (v1->builtin == NULL && v1->builtin == NULL) {
                     sub_result = value_equals(v1->args, v2->args);
                     if (sub_result->type == VALUE_ERROR || sub_result->number == 0) {
@@ -373,16 +394,16 @@ value* value_equals(value* v1, value* v2) {
                             result = sub_result;
                         } else {
                             value_dispose(sub_result);
-                            result = value_new_number(1);
+                            result = value_new_bool(1);
                         }
                     }
                 } else {
-                    result = value_new_number(0);
+                    result = value_new_bool(0);
                 }
             case VALUE_SEXPR:
             case VALUE_QEXPR:
                 if (v1->num_children != v2->num_children) {
-                    result = value_new_number(0);
+                    result = value_new_bool(0);
                 } else {
                     for (size_t i = 0; i < v1->num_children; i++) {
                         sub_result = value_equals(v1->children[i], v2->children[i]);
@@ -395,7 +416,7 @@ value* value_equals(value* v1, value* v2) {
                     }
 
                     if (result == NULL) {
-                        result = value_new_number(1);
+                        result = value_new_bool(1);
                     }
                 }
             default:
@@ -416,6 +437,8 @@ char* get_value_type_name(value_type t) {
             return "error";
         case VALUE_INFO:
             return "info";
+        case VALUE_BOOL:
+            return "bool";
         case VALUE_FUNCTION:
             return "function";
         case VALUE_SEXPR:
