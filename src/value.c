@@ -190,8 +190,16 @@ value* value_from_tree(tree* t) {
         }
     } else if (strstr(t->tag, "symbol")) {
         return value_new_symbol(t->content);
-    } else if (strstr(t->tag, "bool")) {
-        return value_new_bool((strcmp(t->content, "#true") == 0) ? 1 : 0);
+    } else if (strstr(t->tag, "spec")) {
+        if (strcmp(t->content, "#true") == 0) {
+            return value_new_bool(1);
+        } else if (strcmp(t->content, "#false") == 0) {
+            return value_new_bool(0);
+        } else if (strcmp(t->content, "#nil") == 0) {
+            return value_new_qexpr();
+        } else {
+            return value_new_error("unknown special symbol: %s", t->content);
+        }
     } else {
         value* expr = NULL;
         if (strcmp(t->tag, ">") == 0 || strstr(t->tag, "sexpr")) {

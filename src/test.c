@@ -155,11 +155,12 @@ static void test_str(parser* p, environment* env) {
     test_full_output(p, env, "{+ 1 2 3 (- 4 5) 6}", "{+ 1 2 3 (- 4 5) 6}");
 }
 
-static void test_bool(parser* p, environment* env) {
+static void test_special(parser* p, environment* env) {
     test_bool_output(p, env, "#true", 1);
     test_bool_output(p, env, "#false", 0);
     test_full_output(p, env, "#true", "#true");
     test_full_output(p, env, "#false", "#false");
+    test_full_output(p, env, "#nil", "{}");
 }
 
 static void test_list(parser* p, environment* env) {
@@ -422,7 +423,7 @@ void run_test(parser* p) {
     RUN_TEST_FN(test_numeric, p);
     RUN_TEST_FN(test_errors, p);
     RUN_TEST_FN(test_str, p);
-    RUN_TEST_FN(test_bool, p);
+    RUN_TEST_FN(test_special, p);
     RUN_TEST_FN(test_list, p);
     RUN_TEST_FN(test_first, p);
     RUN_TEST_FN(test_head, p);

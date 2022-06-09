@@ -8,10 +8,10 @@ static const char* GRAMMAR =
                      /[+-]?[0-9]+\\.[0-9]*/ | \
                      /[+-]?[0-9]+/ ; \
     symbol         : /[a-zA-Z0-9_+\\-*\\/%\\^\\\\=<>!&|]+/ ; \
-    bool           : \"#true\" | \"#false\" ; \
+    spec           : \"#true\" | \"#false\" | \"#nil\"; \
     sexpr          : '(' <expr>* ')' ; \
     qexpr          : '{' <expr>* '}' ; \
-    expr           : <number> | <symbol> | <bool> | <sexpr> | <qexpr> ; \
+    expr           : <number> | <symbol> | <spec> | <sexpr> | <qexpr> ; \
     program        : /^/ <expr>* /$/ ; \
     ";
 
@@ -29,17 +29,17 @@ static tree wrap_mpc_tree(mpc_ast_t* ast) {
 void parser_init(parser* p) {
     p->num = mpc_new("number");
     p->sym = mpc_new("symbol");
-    p->bool = mpc_new("bool");
+    p->spec = mpc_new("spec");
     p->sexpr = mpc_new("sexpr");
     p->qexpr = mpc_new("qexpr");
     p->expr = mpc_new("expr");
     p->prog = mpc_new("program");
 
-    mpca_lang(MPCA_LANG_DEFAULT, GRAMMAR, p->num, p->sym, p->bool, p->sexpr, p->qexpr, p->expr, p->prog);
+    mpca_lang(MPCA_LANG_DEFAULT, GRAMMAR, p->num, p->sym, p->spec, p->sexpr, p->qexpr, p->expr, p->prog);
 }
 
 void parser_dispose(parser* p) {
-    mpc_cleanup(7, p->num, p->sym, p->bool, p->sexpr, p->qexpr, p->expr, p->prog);
+    mpc_cleanup(7, p->num, p->sym, p->spec, p->sexpr, p->qexpr, p->expr, p->prog);
 }
 
 int parser_parse(parser* p, char* input, result* r) {
