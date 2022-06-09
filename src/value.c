@@ -195,7 +195,7 @@ value* value_from_tree(tree* t) {
             return value_new_bool(1);
         } else if (strcmp(t->content, "#false") == 0) {
             return value_new_bool(0);
-        } else if (strcmp(t->content, "#nil") == 0) {
+        } else if (strcmp(t->content, "#null") == 0) {
             return value_new_qexpr();
         } else {
             return value_new_error("unknown special symbol: %s", t->content);

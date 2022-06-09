@@ -7,8 +7,8 @@ static const char* GRAMMAR =
     number         : /[+-]?[0-9]*\\.[0-9]*/ | \
                      /[+-]?[0-9]+\\.[0-9]*/ | \
                      /[+-]?[0-9]+/ ; \
-    symbol         : /[a-zA-Z0-9_+\\-*\\/%\\^\\\\=<>!&|]+/ ; \
-    spec           : \"#true\" | \"#false\" | \"#nil\"; \
+    symbol         : /[a-zA-Z0-9_+\\-*\\/%\\^\\\\=<>!&|\\?]+/ ; \
+    spec           : \"#true\" | \"#false\" | \"#null\"; \
     sexpr          : '(' <expr>* ')' ; \
     qexpr          : '{' <expr>* '}' ; \
     expr           : <number> | <symbol> | <spec> | <sexpr> | <qexpr> ; \
