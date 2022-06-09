@@ -152,6 +152,18 @@ static void test_list(parser* p, environment* env) {
     test_str_output(p, env, "{list 1 2 3}", "{list 1 2 3}");
 }
 
+static void test_first(parser* p, environment* env) {
+    test_number_output(p, env, "first {1 2 3}", 1);
+    test_str_output(p, env, "first {1}", "1");
+    test_str_output(p, env, "first {+ 1 2 3}", "+");
+    test_str_output(p, env, "first {{+ 1} {2 3}}", "{+ 1}");
+    test_str_output(p, env, "first {(+ 1) {2 3}}", "(+ 1)");
+
+    test_error_output(p, env, "first 1", "arg #0 (1) must be of type q-expr");
+    test_error_output(p, env, "first {}", "arg #0 ({}) must be at least 1-long");
+    test_error_output(p, env, "first 1 2 3", "expects exactly 1 arg");
+}
+
 static void test_head(parser* p, environment* env) {
     test_str_output(p, env, "head {1 2 3}", "{1}");
     test_str_output(p, env, "head {1}", "{1}");
@@ -348,6 +360,7 @@ void run_test(parser* p, environment* env) {
     RUN_TEST_FN(test_errors, p, env);
     RUN_TEST_FN(test_str, p, env);
     RUN_TEST_FN(test_list, p, env);
+    RUN_TEST_FN(test_first, p, env);
     RUN_TEST_FN(test_head, p, env);
     RUN_TEST_FN(test_tail, p, env);
     RUN_TEST_FN(test_join, p, env);

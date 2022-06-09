@@ -12,7 +12,6 @@ int main(int argc, char** argv) {
 
     parser_init(&p);
     environment_init(&e);
-
     environment_register_builtins(&e);
 
     if (argc > 1 && strcmp(argv[1], "test") == 0) {

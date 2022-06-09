@@ -214,6 +214,14 @@ static value* builtin_list(value** args, size_t num_args, char* name, environmen
     return result;
 }
 
+static value* builtin_first(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
+    ASSERT_MIN_ARG_LENGTH(name, args[0], 1, 0);
+
+    return value_copy(args[0]->children[0]);
+}
+
 static value* builtin_head(value** args, size_t num_args, char* name, environment* env) {
     ASSERT_NUM_ARGS(name, num_args, 1);
     ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
@@ -458,8 +466,11 @@ void environment_register_builtins(environment* e) {
 
     // list manipulation builtins
     environment_register_function(e, "list", builtin_list);
+    environment_register_function(e, "first", builtin_first);
+    environment_register_function(e, "car", builtin_first);
     environment_register_function(e, "head", builtin_head);
     environment_register_function(e, "tail", builtin_tail);
+    environment_register_function(e, "cdr", builtin_tail);
     environment_register_function(e, "join", builtin_join);
     environment_register_function(e, "eval", builtin_eval);
     environment_register_function(e, "cons", builtin_cons);
