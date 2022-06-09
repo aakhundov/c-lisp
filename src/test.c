@@ -160,7 +160,7 @@ static void test_special(parser* p, environment* env) {
     test_bool_output(p, env, "#false", 0);
     test_full_output(p, env, "#true", "#true");
     test_full_output(p, env, "#false", "#false");
-    test_full_output(p, env, "#nil", "{}");
+    test_full_output(p, env, "#null", "{}");
 }
 
 static void test_list(parser* p, environment* env) {
@@ -436,6 +436,8 @@ static void test_eq(parser* p, environment* env) {
     test_bool_output(p, env, "== (lambda {x y} {+ x y}) (lambda {x y} {+ x y})", 1);
     test_bool_output(p, env, "== (lambda {x y} {+ x y}) (lambda {x z} {+ x z})", 0);
     test_bool_output(p, env, "== (lambda {x y} {+ x y}) (lambda {x y} {- x y})", 0);
+    test_bool_output(p, env, "== #true #false", 0);
+    test_bool_output(p, env, "== #true #true", 1);
 
     test_error_output(p, env, "== 1", "expects at least 2 args");
     test_error_output(p, env, "== {a}", "expects at least 2 args");
@@ -462,9 +464,135 @@ static void test_neq(parser* p, environment* env) {
     test_bool_output(p, env, "!= (lambda {x y} {+ x y}) (lambda {x y} {+ x y})", 0);
     test_bool_output(p, env, "!= (lambda {x y} {+ x y}) (lambda {x z} {+ x z})", 1);
     test_bool_output(p, env, "!= (lambda {x y} {+ x y}) (lambda {x y} {- x y})", 1);
+    test_bool_output(p, env, "!= #true #false", 1);
+    test_bool_output(p, env, "!= #true #true", 0);
 
     test_error_output(p, env, "!= 1", "expects at least 2 args");
     test_error_output(p, env, "!= {a}", "expects at least 2 args");
+}
+
+static void test_gt(parser* p, environment* env) {
+    test_bool_output(p, env, "> 1 2", 0);
+    test_bool_output(p, env, "> 1 1", 0);
+    test_bool_output(p, env, "> 2 1", 1);
+    test_bool_output(p, env, "> 5 4 3 2 1", 1);
+    test_bool_output(p, env, "> 5 4 3 2 2", 0);
+    test_bool_output(p, env, "> 5 5 3 2 1", 0);
+    test_bool_output(p, env, "> 1 2 3 4 5", 0);
+    test_bool_output(p, env, "> 5 3 4 2 1", 0);
+    test_bool_output(p, env, "> {} {}", 0);
+    test_bool_output(p, env, "> {a} {}", 1);
+    test_bool_output(p, env, "> {} {a}", 0);
+    test_bool_output(p, env, "> {a} {b}", 0);
+    test_bool_output(p, env, "> {a} {a}", 0);
+    test_bool_output(p, env, "> {b} {a}", 1);
+    test_bool_output(p, env, "> {a a} {a}", 1);
+    test_bool_output(p, env, "> {a} {a a}", 0);
+    test_bool_output(p, env, "> {abc} {abb}", 1);
+    test_bool_output(p, env, "> {abc} {abc}", 0);
+    test_bool_output(p, env, "> {abc} {abd}", 0);
+
+    test_error_output(p, env, "> 1", "expects at least 2 args");
+    test_error_output(p, env, "> {a}", "expects at least 2 args");
+    test_error_output(p, env, "> 1 {a}", "can't compare values of different types");
+    test_error_output(p, env, "> #true #false", "incomprable type");
+    test_error_output(p, env, "> + -", "incomprable type");
+}
+
+static void test_gte(parser* p, environment* env) {
+    test_bool_output(p, env, ">= 1 2", 0);
+    test_bool_output(p, env, ">= 1 1", 1);
+    test_bool_output(p, env, ">= 2 1", 1);
+    test_bool_output(p, env, ">= 5 4 3 2 1", 1);
+    test_bool_output(p, env, ">= 5 4 3 2 2", 1);
+    test_bool_output(p, env, ">= 5 5 3 2 1", 1);
+    test_bool_output(p, env, ">= 1 2 3 4 5", 0);
+    test_bool_output(p, env, ">= 5 3 4 2 1", 0);
+    test_bool_output(p, env, ">= {} {}", 1);
+    test_bool_output(p, env, ">= {a} {}", 1);
+    test_bool_output(p, env, ">= {} {a}", 0);
+    test_bool_output(p, env, ">= {a} {b}", 0);
+    test_bool_output(p, env, ">= {a} {a}", 1);
+    test_bool_output(p, env, ">= {b} {a}", 1);
+    test_bool_output(p, env, ">= {a a} {a}", 1);
+    test_bool_output(p, env, ">= {a} {a a}", 0);
+    test_bool_output(p, env, ">= {abc} {abb}", 1);
+    test_bool_output(p, env, ">= {abc} {abc}", 1);
+    test_bool_output(p, env, ">= {abc} {abd}", 0);
+
+    test_error_output(p, env, ">= 1", "expects at least 2 args");
+    test_error_output(p, env, ">= {a}", "expects at least 2 args");
+    test_error_output(p, env, ">= 1 {a}", "can't compare values of different types");
+    test_error_output(p, env, ">= #true #false", "incomprable type");
+    test_error_output(p, env, ">= + -", "incomprable type");
+}
+
+static void test_lt(parser* p, environment* env) {
+    test_bool_output(p, env, "< 1 2", 1);
+    test_bool_output(p, env, "< 1 1", 0);
+    test_bool_output(p, env, "< 2 1", 0);
+    test_bool_output(p, env, "< 1 2 3 4 5", 1);
+    test_bool_output(p, env, "< 2 2 3 4 5", 0);
+    test_bool_output(p, env, "< 1 2 3 5 5", 0);
+    test_bool_output(p, env, "< 5 4 3 2 1", 0);
+    test_bool_output(p, env, "< 1 2 3 5 4", 0);
+    test_bool_output(p, env, "< {} {}", 0);
+    test_bool_output(p, env, "< {} {a}", 1);
+    test_bool_output(p, env, "< {a} {}", 0);
+    test_bool_output(p, env, "< {a} {b}", 1);
+    test_bool_output(p, env, "< {a} {a}", 0);
+    test_bool_output(p, env, "< {b} {a}", 0);
+    test_bool_output(p, env, "< {a} {a a}", 1);
+    test_bool_output(p, env, "< {a a} {a}", 0);
+    test_bool_output(p, env, "< {abc} {abb}", 0);
+    test_bool_output(p, env, "< {abc} {abc}", 0);
+    test_bool_output(p, env, "< {abc} {abd}", 1);
+
+    test_error_output(p, env, "< 1", "expects at least 2 args");
+    test_error_output(p, env, "< {a}", "expects at least 2 args");
+    test_error_output(p, env, "< 1 {a}", "can't compare values of different types");
+    test_error_output(p, env, "< #true #false", "incomprable type");
+    test_error_output(p, env, "< + -", "incomprable type");
+}
+
+static void test_lte(parser* p, environment* env) {
+    test_bool_output(p, env, "<= 1 2", 1);
+    test_bool_output(p, env, "<= 1 1", 1);
+    test_bool_output(p, env, "<= 2 1", 0);
+    test_bool_output(p, env, "<= 1 2 3 4 5", 1);
+    test_bool_output(p, env, "<= 2 2 3 4 5", 1);
+    test_bool_output(p, env, "<= 1 2 3 5 5", 1);
+    test_bool_output(p, env, "<= 5 4 3 2 1", 0);
+    test_bool_output(p, env, "<= 1 2 3 5 4", 0);
+    test_bool_output(p, env, "<= {} {}", 1);
+    test_bool_output(p, env, "<= {} {a}", 1);
+    test_bool_output(p, env, "<= {a} {}", 0);
+    test_bool_output(p, env, "<= {a} {b}", 1);
+    test_bool_output(p, env, "<= {a} {a}", 1);
+    test_bool_output(p, env, "<= {b} {a}", 0);
+    test_bool_output(p, env, "<= {a} {a a}", 1);
+    test_bool_output(p, env, "<= {a a} {a}", 0);
+    test_bool_output(p, env, "<= {abc} {abb}", 0);
+    test_bool_output(p, env, "<= {abc} {abc}", 1);
+    test_bool_output(p, env, "<= {abc} {abd}", 1);
+
+    test_error_output(p, env, "<= 1", "expects at least 2 args");
+    test_error_output(p, env, "<= {a}", "expects at least 2 args");
+    test_error_output(p, env, "<= 1 {a}", "can't compare values of different types");
+    test_error_output(p, env, "<= #true #false", "incomprable type");
+    test_error_output(p, env, "<= + -", "incomprable type");
+}
+
+static void test_null_q(parser* p, environment* env) {
+    test_bool_output(p, env, "null? {}", 1);
+    test_bool_output(p, env, "null? {1}", 0);
+    test_bool_output(p, env, "null? {1 2 3}", 0);
+    test_bool_output(p, env, "null? {a}", 0);
+    test_bool_output(p, env, "null? {+ -}", 0);
+
+    test_error_output(p, env, "null? {} {1}", "expects exactly 1 arg");
+    test_error_output(p, env, "null? {} {1} 2", "expects exactly 1 arg");
+    test_error_output(p, env, "null? 1", "arg #0 (1) must be of type q-expr");
 }
 
 void run_test(parser* p) {
@@ -490,4 +618,9 @@ void run_test(parser* p) {
     RUN_TEST_FN(test_fn, p);
     RUN_TEST_FN(test_eq, p);
     RUN_TEST_FN(test_neq, p);
+    RUN_TEST_FN(test_gt, p);
+    RUN_TEST_FN(test_gte, p);
+    RUN_TEST_FN(test_lt, p);
+    RUN_TEST_FN(test_lte, p);
+    RUN_TEST_FN(test_null_q, p);
 }

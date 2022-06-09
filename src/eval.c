@@ -444,6 +444,53 @@ static value* builtin_neq(value** args, size_t num_args, char* name, environment
     return value_new_bool(truth);
 }
 
+static value* builtin_comp(value** args, size_t num_args, char* name, environment* env, int direction, int inverse) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 2);
+
+    int truth = 1;
+    int sub_direction;
+    value* sub_result;
+
+    for (size_t i = 0; i < num_args - 1; i++) {
+        sub_result = value_compare(args[i], args[i + 1]);
+        if (sub_result->type == VALUE_ERROR) {
+            return sub_result;
+        }
+        sub_direction = sub_result->number * direction;
+        value_dispose(sub_result);
+
+        if ((!inverse && sub_direction <= 0) || (inverse && sub_direction > 0)) {
+            truth = 0;
+            break;
+        }
+    }
+
+    return value_new_bool(truth);
+}
+
+static value* builtin_gt(value** args, size_t num_args, char* name, environment* env) {
+    return builtin_comp(args, num_args, name, env, 1, 0);
+}
+
+static value* builtin_gte(value** args, size_t num_args, char* name, environment* env) {
+    return builtin_comp(args, num_args, name, env, -1, 1);
+}
+
+static value* builtin_lt(value** args, size_t num_args, char* name, environment* env) {
+    return builtin_comp(args, num_args, name, env, -1, 0);
+}
+
+static value* builtin_lte(value** args, size_t num_args, char* name, environment* env) {
+    return builtin_comp(args, num_args, name, env, 1, 1);
+}
+
+static value* builtin_null_q(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
+
+    return value_new_bool((args[0]->num_children == 0) ? 1 : 0);
+}
+
 static value* call_lambda(value* lambda, value** args, size_t num_args, environment* env) {
     char* name = (lambda->symbol != NULL) ? lambda->symbol : "lambda";
 
@@ -576,4 +623,13 @@ void environment_register_builtins(environment* e) {
     environment_register_function(e, "eq", builtin_eq);
     environment_register_function(e, "!=", builtin_neq);
     environment_register_function(e, "neq", builtin_neq);
+    environment_register_function(e, ">", builtin_gt);
+    environment_register_function(e, "gt", builtin_gt);
+    environment_register_function(e, ">=", builtin_gte);
+    environment_register_function(e, "gte", builtin_gte);
+    environment_register_function(e, "<", builtin_lt);
+    environment_register_function(e, "lt", builtin_lt);
+    environment_register_function(e, "<=", builtin_lte);
+    environment_register_function(e, "lte", builtin_lte);
+    environment_register_function(e, "null?", builtin_null_q);
 }

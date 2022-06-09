@@ -364,7 +364,7 @@ value* value_compare(value* v1, value* v2) {
                 }
 
                 if (result == NULL) {
-                    result = value_new_number(v1->num_children - v2->num_children);
+                    result = value_new_number((int)v1->num_children - (int)v2->num_children);
                 }
                 break;
             default:
