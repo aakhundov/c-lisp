@@ -356,6 +356,41 @@ static value* builtin_lambda(value** args, size_t num_args, char* name, environm
     return value_new_function_lambda(args[0], args[1]);
 }
 
+static value* builtin_fn(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 2);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
+    ASSERT_ARG_TYPE(name, args[1], VALUE_QEXPR, 1);
+    ASSERT_MIN_ARG_LENGTH(name, args[0], 1, 0);
+    ASSERT_EXPR_CHILDREN_TYPE(name, args[0], VALUE_SYMBOL, 0);
+
+    value* fn_args = value_new_qexpr();
+    for (size_t i = 1; i < args[0]->num_children; i++) {
+        value_add_child(fn_args, value_copy(args[0]->children[i]));
+    }
+    value* fn_body = value_copy(args[1]);
+
+    value* lambda_args = value_new_qexpr();
+    value_add_child(lambda_args, fn_args);
+    value_add_child(lambda_args, fn_body);
+    value* lambda = builtin_lambda(lambda_args->children, 2, name, env);
+    value_dispose(lambda_args);
+
+    if (lambda->type == VALUE_ERROR) {
+        return lambda;
+    } else {
+        value* fn_name = value_new_qexpr();
+        value_add_child(fn_name, value_copy(args[0]->children[0]));
+
+        value* def_args = value_new_qexpr();
+        value_add_child(def_args, fn_name);
+        value_add_child(def_args, lambda);
+        value* result = builtin_def(def_args->children, 2, name, env);
+        value_dispose(def_args);
+
+        return result;
+    }
+}
+
 static value* call_lambda(value* lambda, value** args, size_t num_args, environment* env) {
     char* name = (lambda->symbol != NULL) ? lambda->symbol : "lambda";
 
@@ -481,4 +516,5 @@ void environment_register_builtins(environment* e) {
     environment_register_function(e, "def", builtin_def);
     environment_register_function(e, "local", builtin_local);
     environment_register_function(e, "lambda", builtin_lambda);
+    environment_register_function(e, "fn", builtin_fn);
 }

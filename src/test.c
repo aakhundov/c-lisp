@@ -7,11 +7,15 @@
 #include "parse.h"
 #include "value.h"
 
-#define RUN_TEST_FN(fn, p, env)                \
+#define RUN_TEST_FN(fn, p)                     \
     {                                          \
         printf("[%s]\n", #fn);                 \
         printf("=========================\n"); \
-        fn(p, env);                            \
+        environment env;                       \
+        environment_init(&env);                \
+        environment_register_builtins(&env);   \
+        fn(p, &env);                           \
+        environment_dispose(&env);             \
         printf("\n");                          \
     }
 
@@ -353,23 +357,66 @@ static void test_function_call(parser* p, environment* env) {
     test_error_output(p, env, "fn-wrong 1", "undefined symbol: y");
 }
 
-void run_test(parser* p, environment* env) {
+static void test_fn(parser* p, environment* env) {
+    test_info_output(p, env, "fn {fx-negate x} {- x}", "defined: fx-negate");
+    test_info_output(p, env, "fn {fx-restore x} {- (fx-negate x)}", "defined: fx-restore");
+    test_info_output(p, env, "fn {fx-add x y z} {+ x y z}", "defined: fx-add");
+    test_info_output(p, env, "fn {fx-add-mul x y} {+ x (* x y)}", "defined: fx-add-mul");
+    test_info_output(p, env, "fn {fx-pack x & y} {join (list x) y}", "defined: fx-pack");
+    test_info_output(p, env, "fn {fx-curry f args} {eval (join (list f) args)}", "defined: fx-curry");
+    test_info_output(p, env, "fn {fx-uncurry f & args} {f args}", "defined: fx-uncurry");
+    test_info_output(p, env, "fn {fx-wrong x} {+ x y}", "defined: fx-wrong");
+
+    test_number_output(p, env, "fx-negate 1", -1);
+    test_number_output(p, env, "fx-negate -3.14", 3.14);
+    test_number_output(p, env, "fx-restore -3.14", -3.14);
+    test_number_output(p, env, "fx-add 1 2 3", 6);
+    test_number_output(p, env, "fx-add 0 0 0", 0);
+    test_number_output(p, env, "fx-add-mul 10 20", 210);
+    test_number_output(p, env, "fx-add-mul -7 5", -42);
+    test_str_output(p, env, "fx-pack 1", "{1}");
+    test_str_output(p, env, "fx-pack 1 2 3", "{1 2 3}");
+    test_number_output(p, env, "fx-curry + {1 2 3}", 6);
+    test_number_output(p, env, "fx-curry * {10 20}", 200);
+    test_str_output(p, env, "fx-uncurry head 1 2 3", "{1}");
+    test_number_output(p, env, "fx-uncurry len 1 2 3", 3);
+    test_str_output(p, env, "fx-uncurry tail 1", "{}");
+
+    test_error_output(p, env, "fx-negate 1 2", "expects exactly 1 arg");
+    test_error_output(p, env, "fx-add 1 2", "expects exactly 3 args");
+    test_error_output(p, env, "fx-add 1 2 3 4", "expects exactly 3 args");
+    test_error_output(p, env, "fx-wrong 1", "undefined symbol: y");
+
+    test_error_output(p, env, "fn 1", "expects exactly 2 args");
+    test_error_output(p, env, "fn {f x}", "expects exactly 2 args");
+    test_error_output(p, env, "fn {f x} {x} {x}", "expects exactly 2 args");
+    test_error_output(p, env, "fn 1 2", "arg #0 (1) must be of type q-expr");
+    test_error_output(p, env, "fn {f x} 2", "arg #1 (2) must be of type q-expr");
+    test_error_output(p, env, "fn 1 {x}", "arg #0 (1) must be of type q-expr");
+    test_error_output(p, env, "fn {} {1}", "arg #0 ({}) must be at least 1-long");
+    test_error_output(p, env, "fn {f 1} {2}", "arg #0 ({f 1}) must consist of symbol children");
+    test_error_output(p, env, "fn {f x &} {1}", "exactly one argument must follow &");
+    test_error_output(p, env, "fn {f x & y z} {1}", "exactly one argument must follow &");
+}
+
+void run_test(parser* p) {
     counter = 0;
 
-    RUN_TEST_FN(test_numeric, p, env);
-    RUN_TEST_FN(test_errors, p, env);
-    RUN_TEST_FN(test_str, p, env);
-    RUN_TEST_FN(test_list, p, env);
-    RUN_TEST_FN(test_first, p, env);
-    RUN_TEST_FN(test_head, p, env);
-    RUN_TEST_FN(test_tail, p, env);
-    RUN_TEST_FN(test_join, p, env);
-    RUN_TEST_FN(test_eval, p, env);
-    RUN_TEST_FN(test_cons, p, env);
-    RUN_TEST_FN(test_len, p, env);
-    RUN_TEST_FN(test_init, p, env);
-    RUN_TEST_FN(test_def, p, env);
-    RUN_TEST_FN(test_lambda, p, env);
-    RUN_TEST_FN(test_parent_env, p, env);
-    RUN_TEST_FN(test_function_call, p, env);
+    RUN_TEST_FN(test_numeric, p);
+    RUN_TEST_FN(test_errors, p);
+    RUN_TEST_FN(test_str, p);
+    RUN_TEST_FN(test_list, p);
+    RUN_TEST_FN(test_first, p);
+    RUN_TEST_FN(test_head, p);
+    RUN_TEST_FN(test_tail, p);
+    RUN_TEST_FN(test_join, p);
+    RUN_TEST_FN(test_eval, p);
+    RUN_TEST_FN(test_cons, p);
+    RUN_TEST_FN(test_len, p);
+    RUN_TEST_FN(test_init, p);
+    RUN_TEST_FN(test_def, p);
+    RUN_TEST_FN(test_lambda, p);
+    RUN_TEST_FN(test_parent_env, p);
+    RUN_TEST_FN(test_function_call, p);
+    RUN_TEST_FN(test_fn, p);
 }
