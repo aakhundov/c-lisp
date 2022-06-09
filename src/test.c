@@ -417,6 +417,56 @@ static void test_fn(parser* p, environment* env) {
     test_error_output(p, env, "fn {f x & y z} {1}", "exactly one argument must follow &");
 }
 
+static void test_eq(parser* p, environment* env) {
+    test_bool_output(p, env, "== 1 1", 1);
+    test_bool_output(p, env, "== 1 2", 0);
+    test_bool_output(p, env, "== 1 1 1 1 1", 1);
+    test_bool_output(p, env, "== 1 1 1 1 2", 0);
+    test_bool_output(p, env, "== 2 1 1 1 1", 0);
+    test_bool_output(p, env, "== 1 2 3 4 5", 0);
+    test_bool_output(p, env, "== {a} {a}", 1);
+    test_bool_output(p, env, "== {a} {b}", 0);
+    test_bool_output(p, env, "== {a} {a a}", 0);
+    test_bool_output(p, env, "== {a {b}} {a {b}}", 1);
+    test_bool_output(p, env, "== {a {c}} {a {b}}", 0);
+    test_bool_output(p, env, "== {a {#true {1 2 3}}} {a {#true {1 2 3}}}", 1);
+    test_bool_output(p, env, "== + add", 1);
+    test_bool_output(p, env, "== + add -", 0);
+    test_bool_output(p, env, "== + -", 0);
+    test_bool_output(p, env, "== (lambda {x y} {+ x y}) (lambda {x y} {+ x y})", 1);
+    test_bool_output(p, env, "== (lambda {x y} {+ x y}) (lambda {x z} {+ x z})", 0);
+    test_bool_output(p, env, "== (lambda {x y} {+ x y}) (lambda {x y} {- x y})", 0);
+
+    test_error_output(p, env, "== 1", "expects at least 2 args");
+    test_error_output(p, env, "== {a}", "expects at least 2 args");
+}
+
+static void test_neq(parser* p, environment* env) {
+    test_bool_output(p, env, "!= 1 1", 0);
+    test_bool_output(p, env, "!= 1 2", 1);
+    test_bool_output(p, env, "!= 1 1 1 1 1", 0);
+    test_bool_output(p, env, "!= 1 1 1 1 2", 0);
+    test_bool_output(p, env, "!= 2 1 1 1 1", 0);
+    test_bool_output(p, env, "!= 1 2 3 4 1", 0);
+    test_bool_output(p, env, "!= 1 2 3 4 5", 1);
+    test_bool_output(p, env, "!= {a} {a}", 0);
+    test_bool_output(p, env, "!= {a} {b}", 1);
+    test_bool_output(p, env, "!= {a} {a a}", 1);
+    test_bool_output(p, env, "!= {a} {a} {a a}", 0);
+    test_bool_output(p, env, "!= {a {b}} {a {b}}", 0);
+    test_bool_output(p, env, "!= {a {c}} {a {b}} {a {c}}", 0);
+    test_bool_output(p, env, "!= {a {c}} {a {b}}", 1);
+    test_bool_output(p, env, "!= {a {#true {1 2 3}}} {a {#true {1 2 3}}}", 0);
+    test_bool_output(p, env, "!= + - * /", 1);
+    test_bool_output(p, env, "!= + - * / add", 0);
+    test_bool_output(p, env, "!= (lambda {x y} {+ x y}) (lambda {x y} {+ x y})", 0);
+    test_bool_output(p, env, "!= (lambda {x y} {+ x y}) (lambda {x z} {+ x z})", 1);
+    test_bool_output(p, env, "!= (lambda {x y} {+ x y}) (lambda {x y} {- x y})", 1);
+
+    test_error_output(p, env, "!= 1", "expects at least 2 args");
+    test_error_output(p, env, "!= {a}", "expects at least 2 args");
+}
+
 void run_test(parser* p) {
     counter = 0;
 
@@ -438,4 +488,6 @@ void run_test(parser* p) {
     RUN_TEST_FN(test_parent_env, p);
     RUN_TEST_FN(test_function_call, p);
     RUN_TEST_FN(test_fn, p);
+    RUN_TEST_FN(test_eq, p);
+    RUN_TEST_FN(test_neq, p);
 }

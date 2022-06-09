@@ -391,6 +391,59 @@ static value* builtin_fn(value** args, size_t num_args, char* name, environment*
     }
 }
 
+static value* builtin_eq(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 2);
+
+    int truth = 1;
+    int sub_truth;
+    value* sub_result;
+
+    for (size_t i = 0; i < num_args - 1; i++) {
+        sub_result = value_equals(args[i], args[i + 1]);
+        if (sub_result->type == VALUE_ERROR) {
+            return sub_result;
+        }
+        sub_truth = sub_result->number;
+        value_dispose(sub_result);
+
+        if (sub_truth == 0) {
+            truth = 0;
+            break;
+        }
+    }
+
+    return value_new_bool(truth);
+}
+
+static value* builtin_neq(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 2);
+
+    int truth = 1;
+    int sub_truth;
+    value* sub_result;
+
+    for (size_t i = 0; i < num_args - 1; i++) {
+        for (size_t j = i + 1; j < num_args; j++) {
+            sub_result = value_equals(args[i], args[j]);
+            if (sub_result->type == VALUE_ERROR) {
+                return sub_result;
+            }
+            sub_truth = sub_result->number;
+            value_dispose(sub_result);
+
+            if (sub_truth == 1) {
+                truth = 0;
+                break;
+            }
+        }
+        if (truth == 0) {
+            break;
+        }
+    }
+
+    return value_new_bool(truth);
+}
+
 static value* call_lambda(value* lambda, value** args, size_t num_args, environment* env) {
     char* name = (lambda->symbol != NULL) ? lambda->symbol : "lambda";
 
@@ -517,4 +570,10 @@ void environment_register_builtins(environment* e) {
     environment_register_function(e, "local", builtin_local);
     environment_register_function(e, "lambda", builtin_lambda);
     environment_register_function(e, "fn", builtin_fn);
+
+    // comparison functions
+    environment_register_function(e, "==", builtin_eq);
+    environment_register_function(e, "eq", builtin_eq);
+    environment_register_function(e, "!=", builtin_neq);
+    environment_register_function(e, "neq", builtin_neq);
 }

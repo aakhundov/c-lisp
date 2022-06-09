@@ -336,13 +336,16 @@ value* value_compare(value* v1, value* v2) {
                 } else {
                     result = value_new_number(0);
                 }
+                break;
             case VALUE_SYMBOL:
                 result = value_new_number(strcmp(v1->symbol, v2->symbol));
+                break;
             case VALUE_ERROR:
             case VALUE_INFO:
             case VALUE_BOOL:
             case VALUE_FUNCTION:
                 result = value_new_error("incomprable type: %s", get_value_type_name(v1->type));
+                break;
             case VALUE_SEXPR:
             case VALUE_QEXPR:
                 min_children = v1->num_children;
@@ -363,6 +366,7 @@ value* value_compare(value* v1, value* v2) {
                 if (result == NULL) {
                     result = value_new_number(v1->num_children - v2->num_children);
                 }
+                break;
             default:
                 result = value_new_error("unknown value type: %d", v1->type);
         }
@@ -382,12 +386,15 @@ value* value_equals(value* v1, value* v2) {
         switch (v1->type) {
             case VALUE_NUMBER:
                 result = value_new_bool(v1->number == v2->number ? 1 : 0);
+                break;
             case VALUE_SYMBOL:
             case VALUE_ERROR:
             case VALUE_INFO:
                 result = value_new_bool(strcmp(v1->symbol, v2->symbol) == 0 ? 1 : 0);
+                break;
             case VALUE_BOOL:
                 result = value_new_bool(v1->number == v2->number ? 1 : 0);
+                break;
             case VALUE_FUNCTION:
                 if (v1->builtin != NULL && v1->builtin != NULL) {
                     result = value_new_bool(v1->builtin == v2->builtin ? 1 : 0);
@@ -408,6 +415,7 @@ value* value_equals(value* v1, value* v2) {
                 } else {
                     result = value_new_bool(0);
                 }
+                break;
             case VALUE_SEXPR:
             case VALUE_QEXPR:
                 if (v1->num_children != v2->num_children) {
@@ -427,6 +435,7 @@ value* value_equals(value* v1, value* v2) {
                         result = value_new_bool(1);
                     }
                 }
+                break;
             default:
                 result = value_new_error("unknown value type: %d", v1->type);
         }
