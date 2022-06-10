@@ -315,6 +315,27 @@ int value_to_str(value* v, char* buffer) {
     }
 }
 
+value* value_to_bool(value* v) {
+    switch (v->type) {
+        case VALUE_NUMBER:
+            return value_new_bool((v->number != 0) ? 1 : 0);
+        case VALUE_SYMBOL:
+            return value_new_bool((v->symbol != NULL && strlen(v->symbol) > 0) ? 1 : 0);
+        case VALUE_ERROR:
+            return value_new_error(v->symbol);
+        case VALUE_INFO:
+        case VALUE_FUNCTION:
+            return value_new_error("can't cast %s to bool", get_value_type_name(v->type));
+        case VALUE_BOOL:
+            return value_new_bool(v->number);
+        case VALUE_SEXPR:
+        case VALUE_QEXPR:
+            return value_new_bool((v->num_children > 0) ? 1 : 0);
+        default:
+            return value_new_error("unknown value type: %d", v->type);
+    }
+}
+
 value* value_compare(value* v1, value* v2) {
     value* result = NULL;
 

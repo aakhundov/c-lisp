@@ -51,6 +51,7 @@ value* value_equals(value* v1, value* v2);
 
 void value_add_child(value* parent, value* child);
 int value_to_str(value* v, char* buffer);
+value* value_to_bool(value* v);
 
 char* get_value_type_name(value_type t);
 

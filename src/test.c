@@ -623,6 +623,69 @@ static void test_list_q(parser* p, environment* env) {
     test_error_output(p, env, "list? {} {1} 2", "expects exactly 1 arg");
 }
 
+static void test_if(parser* p, environment* env) {
+    test_number_output(p, env, "if #true {1} {0}", 1);
+    test_number_output(p, env, "if #false {1} {0}", 0);
+    test_number_output(p, env, "if (< 10 20) {1} {0}", 1);
+    test_number_output(p, env, "if (> 10 20) {1} {0}", 0);
+    test_number_output(p, env, "if 1 {1} {0}", 1);
+    test_number_output(p, env, "if -1 {1} {0}", 1);
+    test_number_output(p, env, "if 0 {1} {0}", 0);
+    test_number_output(p, env, "if {a} {1} {0}", 1);
+    test_number_output(p, env, "if {} {1} {0}", 0);
+    test_number_output(p, env, "if #true {/ 1 1} {/ 1 0}", 1);
+    test_error_output(p, env, "if #false {/ 1 1} {/ 1 0}", "division by zero");
+    test_error_output(p, env, "if + {1} {0}", "can't cast function to bool");
+    test_error_output(p, env, "if (fn {f x} {- x}) {1} {0}", "can't cast info to bool");
+
+    test_info_output(p, env, "fn {positive? x} {if (> x 0) {#true} {#false}}", "defined: positive?");
+    test_bool_output(p, env, "positive? -100", 0);
+    test_bool_output(p, env, "positive? -3.14", 0);
+    test_bool_output(p, env, "positive? -1", 0);
+    test_bool_output(p, env, "positive? 0", 0);
+    test_bool_output(p, env, "positive? 1", 1);
+    test_bool_output(p, env, "positive? 3.14", 1);
+    test_bool_output(p, env, "positive? 100", 1);
+
+    test_info_output(p, env, "fn {fact n} {if (<= n 1) {1} {* n (fact (- n 1))}}", "defined: fact");
+    test_number_output(p, env, "fact 1", 1);
+    test_number_output(p, env, "fact 3", 6);
+    test_number_output(p, env, "fact 5", 120);
+    test_number_output(p, env, "fact 10", 3628800);
+    test_number_output(p, env, "fact 0", 1);
+    test_number_output(p, env, "fact -10", 1);
+
+    test_error_output(p, env, "if #true", "expects exactly 3 args");
+    test_error_output(p, env, "if #true {1}", "expects exactly 3 args");
+    test_error_output(p, env, "if #true {1} {0} {-1}", "expects exactly 3 args");
+    test_error_output(p, env, "if #true 1 {0}", "arg #1 (1) must be of type q-expr");
+    test_error_output(p, env, "if #true {1} 0", "arg #2 (0) must be of type q-expr");
+}
+
+static void test_cond(parser* p, environment* env) {
+    test_number_output(p, env, "cond #true {1}", 1);
+    test_full_output(p, env, "cond #false {0}", "{}");
+    test_number_output(p, env, "cond (< 10 20) {1} (> 10 20) {0}", 1);
+    test_number_output(p, env, "cond (> 10 20) {1} (< 10 20) {0}", 0);
+    test_full_output(p, env, "cond (> 10 20) {1} (> 5 20) {0}", "{}");
+    test_number_output(p, env, "cond 1 {/ 1 1} 0 {/ 1 0}", 1);
+    test_error_output(p, env, "cond 0 {/ 1 1} 1 {/ 1 0}", "division by zero");
+
+    test_info_output(p, env, "fn {sign? x} {cond (< x 0) {-1} (== x 0) {0} #true {1}}", "defined: sign?");
+    test_number_output(p, env, "sign? -100", -1);
+    test_number_output(p, env, "sign? -3.14", -1);
+    test_number_output(p, env, "sign? -1", -1);
+    test_number_output(p, env, "sign? 0", 0);
+    test_number_output(p, env, "sign? 1", 1);
+    test_number_output(p, env, "sign? 3.14", 1);
+    test_number_output(p, env, "sign? 100", 1);
+
+    test_error_output(p, env, "cond #true", "expects at least 2 args");
+    test_error_output(p, env, "cond #true {1} #false", "expects an even number of args");
+    test_error_output(p, env, "cond #true 1 #false {0}", "arg #1 (1) must be of type q-expr");
+    test_error_output(p, env, "cond #true {1} #false 0", "arg #3 (0) must be of type q-expr");
+}
+
 void run_test(parser* p) {
     counter = 0;
 
@@ -656,4 +719,6 @@ void run_test(parser* p) {
     RUN_TEST_FN(test_null_q, p);
     RUN_TEST_FN(test_zero_q, p);
     RUN_TEST_FN(test_list_q, p);
+    RUN_TEST_FN(test_if, p);
+    RUN_TEST_FN(test_cond, p);
 }

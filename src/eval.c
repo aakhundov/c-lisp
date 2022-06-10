@@ -504,6 +504,50 @@ static value* builtin_list_q(value** args, size_t num_args, char* name, environm
     return value_new_bool((args[0]->type == VALUE_QEXPR) ? 1 : 0);
 }
 
+static value* builtin_if(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 3);
+    ASSERT_ARG_TYPE(name, args[1], VALUE_QEXPR, 1);
+    ASSERT_ARG_TYPE(name, args[2], VALUE_QEXPR, 2);
+
+    value* truth = value_to_bool(args[0]);
+    if (truth->type == VALUE_ERROR) {
+        return truth;
+    } else if (truth->number == 1) {
+        value_dispose(truth);
+        return builtin_eval(&args[1], 1, name, env);
+    } else {
+        value_dispose(truth);
+        return builtin_eval(&args[2], 1, name, env);
+    }
+}
+
+static value* builtin_cond(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 2);
+
+    if (num_args % 2 != 0) {
+        return value_new_error("%s expects an even number of args", name);
+    }
+
+    for (size_t i = 0; i < num_args / 2; i++) {
+        ASSERT_ARG_TYPE(name, args[2 * i + 1], VALUE_QEXPR, 2 * i + 1);
+    }
+
+    for (size_t i = 0; i < num_args / 2; i++) {
+        value* truth = value_to_bool(args[2 * i]);
+        if (truth->type == VALUE_ERROR) {
+            return truth;
+        } else if (truth->number == 1) {
+            value_dispose(truth);
+            return builtin_eval(&args[2 * i + 1], 1, name, env);
+        } else {
+            value_dispose(truth);
+        }
+    }
+
+    // no condition was hit
+    return value_new_qexpr();
+}
+
 static value* call_lambda(value* lambda, value** args, size_t num_args, environment* env) {
     char* name = (lambda->symbol != NULL) ? lambda->symbol : "lambda";
 
@@ -648,4 +692,9 @@ void environment_register_builtins(environment* e) {
     environment_register_function(e, "empty?", builtin_null_q);
     environment_register_function(e, "zero?", builtin_zero_q);
     environment_register_function(e, "list?", builtin_list_q);
+
+    // conditional functions
+    environment_register_function(e, "if", builtin_if);
+    environment_register_function(e, "cond", builtin_cond);
+    environment_register_function(e, "switch", builtin_cond);
 }
