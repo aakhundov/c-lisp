@@ -2,4 +2,4 @@
 
 make && \
 echo && \
-./bin/clisp
+./bin/mylisp

@@ -6,7 +6,7 @@ LDLIBS=-ledit -lm
 SRC_DIR=src
 BIN_DIR=bin
 
-APP=$(BIN_DIR)/clisp
+APP=$(BIN_DIR)/mylisp
 LIB=$(APP).so
 SOURCES=$(wildcard $(SRC_DIR)/*.c)
 OBJECTS=$(SOURCES:$(SRC_DIR)/%.c=$(BIN_DIR)/%.o)

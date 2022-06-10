@@ -2,4 +2,4 @@
 
 make && \
 echo && \
-valgrind --leak-check=yes ./bin/clisp test
+valgrind --leak-check=yes ./bin/mylisp test

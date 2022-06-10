@@ -67,14 +67,14 @@ static void process_repl_command(parser* p, environment* env, char* input, char*
 }
 
 void run_repl(parser* p, environment* env) {
-    puts("clisp version 0.0.1");
+    puts("mylisp version 0.0.1");
     puts("enter \"quit\" to quit\n");
 
     int stop = 0;
     char output[16384];
 
     while (!stop) {
-        char* input = readline("clisp> ");
+        char* input = readline("> ");
 
         switch (get_command_type(input)) {
             case COMMAND_EXIT:
