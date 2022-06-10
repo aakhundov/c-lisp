@@ -491,6 +491,19 @@ static value* builtin_null_q(value** args, size_t num_args, char* name, environm
     return value_new_bool((args[0]->num_children == 0) ? 1 : 0);
 }
 
+static value* builtin_zero_q(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_NUMBER, 0);
+
+    return value_new_bool((args[0]->number == 0) ? 1 : 0);
+}
+
+static value* builtin_list_q(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+
+    return value_new_bool((args[0]->type == VALUE_QEXPR) ? 1 : 0);
+}
+
 static value* call_lambda(value* lambda, value** args, size_t num_args, environment* env) {
     char* name = (lambda->symbol != NULL) ? lambda->symbol : "lambda";
 
@@ -632,4 +645,7 @@ void environment_register_builtins(environment* e) {
     environment_register_function(e, "<=", builtin_lte);
     environment_register_function(e, "lte", builtin_lte);
     environment_register_function(e, "null?", builtin_null_q);
+    environment_register_function(e, "empty?", builtin_null_q);
+    environment_register_function(e, "zero?", builtin_zero_q);
+    environment_register_function(e, "list?", builtin_list_q);
 }

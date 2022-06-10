@@ -595,6 +595,34 @@ static void test_null_q(parser* p, environment* env) {
     test_error_output(p, env, "null? 1", "arg #0 (1) must be of type q-expr");
 }
 
+static void test_zero_q(parser* p, environment* env) {
+    test_bool_output(p, env, "zero? 0", 1);
+    test_bool_output(p, env, "zero? 0.0", 1);
+    test_bool_output(p, env, "zero? 1", 0);
+    test_bool_output(p, env, "zero? -1", 0);
+    test_bool_output(p, env, "zero? 3.14", 0);
+    test_bool_output(p, env, "zero? .222", 0);
+
+    test_error_output(p, env, "zero? {} {1}", "expects exactly 1 arg");
+    test_error_output(p, env, "zero? {} {1} 2", "expects exactly 1 arg");
+    test_error_output(p, env, "zero? {}", "arg #0 ({}) must be of type number");
+}
+
+static void test_list_q(parser* p, environment* env) {
+    test_bool_output(p, env, "list? {}", 1);
+    test_bool_output(p, env, "list? {1}", 1);
+    test_bool_output(p, env, "list? {1 2 3}", 1);
+    test_bool_output(p, env, "list? {a}", 1);
+    test_bool_output(p, env, "list? {+ -}", 1);
+    test_bool_output(p, env, "list? 1", 0);
+    test_bool_output(p, env, "list? 3.14", 0);
+    test_bool_output(p, env, "list? +", 0);
+    test_bool_output(p, env, "list? list?", 0);
+
+    test_error_output(p, env, "list? {} {1}", "expects exactly 1 arg");
+    test_error_output(p, env, "list? {} {1} 2", "expects exactly 1 arg");
+}
+
 void run_test(parser* p) {
     counter = 0;
 
@@ -602,6 +630,7 @@ void run_test(parser* p) {
     RUN_TEST_FN(test_errors, p);
     RUN_TEST_FN(test_str, p);
     RUN_TEST_FN(test_special, p);
+
     RUN_TEST_FN(test_list, p);
     RUN_TEST_FN(test_first, p);
     RUN_TEST_FN(test_head, p);
@@ -611,10 +640,12 @@ void run_test(parser* p) {
     RUN_TEST_FN(test_cons, p);
     RUN_TEST_FN(test_len, p);
     RUN_TEST_FN(test_init, p);
+
     RUN_TEST_FN(test_def, p);
     RUN_TEST_FN(test_lambda, p);
     RUN_TEST_FN(test_parent_env, p);
     RUN_TEST_FN(test_function_call, p);
+
     RUN_TEST_FN(test_fn, p);
     RUN_TEST_FN(test_eq, p);
     RUN_TEST_FN(test_neq, p);
@@ -623,4 +654,6 @@ void run_test(parser* p) {
     RUN_TEST_FN(test_lt, p);
     RUN_TEST_FN(test_lte, p);
     RUN_TEST_FN(test_null_q, p);
+    RUN_TEST_FN(test_zero_q, p);
+    RUN_TEST_FN(test_list_q, p);
 }
