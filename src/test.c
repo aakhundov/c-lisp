@@ -417,6 +417,25 @@ static void test_fn(parser* p, environment* env) {
     test_error_output(p, env, "fn {f x & y z} {1}", "exactly one argument must follow &");
 }
 
+static void test_del(parser* p, environment* env) {
+    test_full_output(p, env, "+", "<builtin +>");
+    test_info_output(p, env, "del {+}", "deleted: +");
+    test_error_output(p, env, "+", "undefined symbol: +");
+
+    test_error_output(p, env, "xyz", "undefined symbol: xyz");
+    test_info_output(p, env, "def {xyz} 123", "defined: xyz");
+    test_number_output(p, env, "xyz", 123);
+    test_info_output(p, env, "del {xyz}", "deleted: xyz");
+    test_error_output(p, env, "xyz", "undefined symbol: xyz");
+
+    test_error_output(p, env, "del {x} {y}", "expects exactly 1 arg");
+    test_error_output(p, env, "del 1", "arg #0 (1) must be of type q-expr");
+    test_error_output(p, env, "del {}", "arg #0 ({}) must be exactly 1-long");
+    test_error_output(p, env, "del {x y}", "arg #0 ({x y}) must be exactly 1-long");
+    test_error_output(p, env, "del {1}", "arg #0 ({1}) must consist of symbol children");
+    test_error_output(p, env, "del {abc}", "not found: abc");
+}
+
 static void test_eq(parser* p, environment* env) {
     test_bool_output(p, env, "== 1 1", 1);
     test_bool_output(p, env, "== 1 2", 0);
@@ -770,6 +789,7 @@ void run_test(parser* p) {
     RUN_TEST_FN(test_parent_env, p);
     RUN_TEST_FN(test_function_call, p);
     RUN_TEST_FN(test_fn, p);
+    RUN_TEST_FN(test_del, p);
 
     RUN_TEST_FN(test_eq, p);
     RUN_TEST_FN(test_neq, p);

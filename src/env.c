@@ -69,6 +69,29 @@ void environment_put(environment* e, char* name, value* v, int local) {
     e->length++;
 }
 
+int environment_delete(environment* e, char* name) {
+    for (size_t i = 0; i < e->length; i++) {
+        if (strcmp(e->names[i], name) == 0) {
+            free(e->names[i]);
+            value_dispose(e->values[i]);
+
+            for (size_t j = i; j < e->length - 1; j++) {
+                e->names[j] = e->names[j + 1];
+                e->values[j] = e->values[j + 1];
+            }
+            e->length--;
+
+            return 1;
+        }
+    }
+
+    if (e->parent != NULL) {
+        return environment_delete(e->parent, name);
+    } else {
+        return 0;
+    }
+}
+
 void environment_register_number(environment* e, char* name, double number) {
     value* num = value_new_number(number);
     environment_put(e, name, num, 0);

@@ -76,7 +76,7 @@
             value_to_str(arg, buffer);              \
             return value_new_error(                 \
                 "%s: arg #%d (%s) "                 \
-                "must be %d-long",                  \
+                "must be exactly %d-long",          \
                 fn, ordinal, buffer, length);       \
         }                                           \
     }
@@ -586,6 +586,20 @@ static value* builtin_not(value** args, size_t num_args, char* name, environment
     return truth;
 }
 
+static value* builtin_del(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
+    ASSERT_ARG_LENGTH(name, args[0], 1, 0);
+    ASSERT_EXPR_CHILDREN_TYPE(name, args[0], VALUE_SYMBOL, 0);
+
+    char* item_name = args[0]->children[0]->symbol;
+    if (environment_delete(env, item_name) == 1) {
+        return value_new_info("deleted: %s", item_name);
+    } else {
+        return value_new_error("not found: %s", item_name);
+    }
+}
+
 static value* call_lambda(value* lambda, value** args, size_t num_args, environment* env) {
     char* name = (lambda->symbol != NULL) ? lambda->symbol : "lambda";
 
@@ -742,6 +756,7 @@ void environment_register_builtins(environment* e) {
     environment_register_function(e, "local", builtin_local);
     environment_register_function(e, "lambda", builtin_lambda);
     environment_register_function(e, "fn", builtin_fn);
+    environment_register_function(e, "del", builtin_del);
 
     // comparison functions
     environment_register_function(e, "==", builtin_eq);
