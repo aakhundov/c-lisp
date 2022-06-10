@@ -666,14 +666,6 @@ static void test_if(parser* p, environment* env) {
     test_bool_output(p, env, "positive? 3.14", 1);
     test_bool_output(p, env, "positive? 100", 1);
 
-    test_info_output(p, env, "fn {fact n} {if (<= n 1) {1} {* n (fact (- n 1))}}", "defined: fact");
-    test_number_output(p, env, "fact 1", 1);
-    test_number_output(p, env, "fact 3", 6);
-    test_number_output(p, env, "fact 5", 120);
-    test_number_output(p, env, "fact 10", 3628800);
-    test_number_output(p, env, "fact 0", 1);
-    test_number_output(p, env, "fact -10", 1);
-
     test_error_output(p, env, "if #true", "expects exactly 3 args");
     test_error_output(p, env, "if #true {1}", "expects exactly 3 args");
     test_error_output(p, env, "if #true {1} {0} {-1}", "expects exactly 3 args");
@@ -689,6 +681,8 @@ static void test_cond(parser* p, environment* env) {
     test_full_output(p, env, "cond (> 10 20) {1} (> 5 20) {0}", "{}");
     test_number_output(p, env, "cond 1 {/ 1 1} 0 {/ 1 0}", 1);
     test_error_output(p, env, "cond 0 {/ 1 1} 1 {/ 1 0}", "division by zero");
+    test_number_output(p, env, "cond 1 {1} (/ 1 0) {0}", 1);
+    test_error_output(p, env, "cond 0 {1} (/ 1 0) {0}", "division by zero");
 
     test_info_output(p, env, "fn {sign x} {cond (< x 0) {-1} (== x 0) {0} #true {1}}", "defined: sign");
     test_number_output(p, env, "sign -100", -1);
@@ -703,6 +697,80 @@ static void test_cond(parser* p, environment* env) {
     test_error_output(p, env, "cond #true {1} #false", "expects an even number of args");
     test_error_output(p, env, "cond #true 1 #false {0}", "arg #1 (1) must be of type q-expr");
     test_error_output(p, env, "cond #true {1} #false 0", "arg #3 (0) must be of type q-expr");
+}
+
+static void test_recursion(parser* p, environment* env) {
+    test_info_output(p, env, "fn {fact n} {if (<= n 1) {1} {* n (fact (- n 1))}}", "defined: fact");
+    test_number_output(p, env, "fact 1", 1);
+    test_number_output(p, env, "fact 3", 6);
+    test_number_output(p, env, "fact 5", 120);
+    test_number_output(p, env, "fact 10", 3628800);
+    test_number_output(p, env, "fact 0", 1);
+    test_number_output(p, env, "fact -10", 1);
+
+    test_info_output(p, env, "fn {length lst} {if (null? lst) {0} {+ 1 (length (tail lst))}}", "defined: length");
+    test_number_output(p, env, "length {}", 0);
+    test_number_output(p, env, "length {a}", 1);
+    test_number_output(p, env, "length {1 2 3}", 3);
+    test_number_output(p, env, "length {{1 2} 3 {4 5 6}}", 3);
+
+    test_info_output(p, env,
+                     "fn {reverse lst} {\n"
+                     "  if\n"
+                     "    (null? lst)\n"
+                     "    {{}}\n"
+                     "    {join (reverse (tail lst)) (head lst)}\n"
+                     "}\n",
+                     "defined: reverse");
+    test_full_output(p, env, "reverse {}", "{}");
+    test_full_output(p, env, "reverse {a}", "{a}");
+    test_full_output(p, env, "reverse {+ - * /}", "{/ * - +}");
+    test_full_output(p, env, "reverse {{1 2} 3 {4 5 6}}", "{{4 5 6} 3 {1 2}}");
+
+    test_info_output(p, env,
+                     "\n"
+                     "fn {flatten lst} {\n"
+                     "  cond\n"
+                     "    (null? lst) {{}}\n"
+                     "    (list? (car lst)) {join (flatten (car lst)) (flatten (cdr lst))}\n"
+                     "    #true {cons (car lst) (flatten (cdr lst))}\n"
+                     "}\n",
+                     "defined: flatten");
+    test_full_output(p, env, "flatten {}", "{}");
+    test_full_output(p, env, "flatten {1}", "{1}");
+    test_full_output(p, env, "flatten {1 2 3 4 5}", "{1 2 3 4 5}");
+    test_full_output(p, env, "flatten {1 2 {3 4 5}}", "{1 2 3 4 5}");
+    test_full_output(p, env, "flatten {{1 2} {3 4 5}}", "{1 2 3 4 5}");
+    test_full_output(p, env, "flatten {{{1} 2} {3 {{4} 5}}}", "{1 2 3 4 5}");
+
+    test_info_output(p, env, "fn {nth lst n} {if (== n 1) {car lst} {nth (cdr lst) (- n 1)}}", "defined: nth");
+    test_number_output(p, env, "nth {1} 1", 1);
+    test_number_output(p, env, "nth {1 2 3} 1", 1);
+    test_number_output(p, env, "nth {1 2 3} 2", 2);
+    test_number_output(p, env, "nth {1 2 3} 3", 3);
+    test_full_output(p, env, "nth {{1} {2 3} 4 5 {6}} 5", "{6}");
+
+    test_info_output(p, env,
+                     "\n"
+                     "fn {present? lst x} {\n"
+                     "  cond\n"
+                     "    (null? lst) {#false}\n"
+                     "    (== (car lst) x) {#true}\n"
+                     "    #true {present? (cdr lst) x}\n"
+                     "}\n",
+                     "defined: present");
+    test_bool_output(p, env, "present? {1 2 3} 1", 1);
+    test_bool_output(p, env, "present? {1 2 3} 3", 1);
+    test_bool_output(p, env, "present? {1 2 3} 0", 0);
+    test_bool_output(p, env, "present? {1 2 3} 3.14", 0);
+    test_bool_output(p, env, "present? {1 2 3} +", 0);
+    test_bool_output(p, env, "present? {+ {-} *} {-}", 1);
+    test_bool_output(p, env, "present? {} 1", 0);
+
+    test_info_output(p, env, "fn {last lst} {if (== (len lst) 1) {car lst} {last (cdr lst)}}", "defined: last");
+    test_number_output(p, env, "last {1 2 3}", 3);
+    test_number_output(p, env, "last {1}", 1);
+    test_error_output(p, env, "last {}", "must be at least 1-long");
 }
 
 static void test_and(parser* p, environment* env) {
@@ -803,6 +871,7 @@ void run_test(parser* p) {
 
     RUN_TEST_FN(test_if, p);
     RUN_TEST_FN(test_cond, p);
+    RUN_TEST_FN(test_recursion, p);
 
     RUN_TEST_FN(test_and, p);
     RUN_TEST_FN(test_or, p);

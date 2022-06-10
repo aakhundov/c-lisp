@@ -534,7 +534,13 @@ static value* builtin_cond(value** args, size_t num_args, char* name, environmen
     }
 
     for (size_t i = 0; i < num_args / 2; i++) {
-        value* truth = value_to_bool(args[2 * i]);
+        value* evaled = value_evaluate(args[2 * i], env);
+        if (evaled->type == VALUE_ERROR) {
+            return evaled;
+        }
+
+        value* truth = value_to_bool(evaled);
+        value_dispose(evaled);
         if (truth->type == VALUE_ERROR) {
             return truth;
         } else if (truth->number == 1) {
@@ -639,7 +645,7 @@ static value* call_lambda(value* lambda, value** args, size_t num_args, environm
 static int is_delayed_evaluation_function(value* fn) {
     assert(fn->type == VALUE_FUNCTION);
 
-    if (fn->builtin == builtin_and || fn->builtin == builtin_or) {
+    if (fn->builtin == builtin_and || fn->builtin == builtin_or || fn->builtin == builtin_cond) {
         return 1;
     } else {
         return 0;
