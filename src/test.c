@@ -671,19 +671,80 @@ static void test_cond(parser* p, environment* env) {
     test_number_output(p, env, "cond 1 {/ 1 1} 0 {/ 1 0}", 1);
     test_error_output(p, env, "cond 0 {/ 1 1} 1 {/ 1 0}", "division by zero");
 
-    test_info_output(p, env, "fn {sign? x} {cond (< x 0) {-1} (== x 0) {0} #true {1}}", "defined: sign?");
-    test_number_output(p, env, "sign? -100", -1);
-    test_number_output(p, env, "sign? -3.14", -1);
-    test_number_output(p, env, "sign? -1", -1);
-    test_number_output(p, env, "sign? 0", 0);
-    test_number_output(p, env, "sign? 1", 1);
-    test_number_output(p, env, "sign? 3.14", 1);
-    test_number_output(p, env, "sign? 100", 1);
+    test_info_output(p, env, "fn {sign x} {cond (< x 0) {-1} (== x 0) {0} #true {1}}", "defined: sign");
+    test_number_output(p, env, "sign -100", -1);
+    test_number_output(p, env, "sign -3.14", -1);
+    test_number_output(p, env, "sign -1", -1);
+    test_number_output(p, env, "sign 0", 0);
+    test_number_output(p, env, "sign 1", 1);
+    test_number_output(p, env, "sign 3.14", 1);
+    test_number_output(p, env, "sign 100", 1);
 
     test_error_output(p, env, "cond #true", "expects at least 2 args");
     test_error_output(p, env, "cond #true {1} #false", "expects an even number of args");
     test_error_output(p, env, "cond #true 1 #false {0}", "arg #1 (1) must be of type q-expr");
     test_error_output(p, env, "cond #true {1} #false 0", "arg #3 (0) must be of type q-expr");
+}
+
+static void test_and(parser* p, environment* env) {
+    test_bool_output(p, env, "&& #true", 1);
+    test_bool_output(p, env, "&& #false", 0);
+    test_bool_output(p, env, "&& 1", 1);
+    test_bool_output(p, env, "&& 0", 0);
+    test_bool_output(p, env, "&& #true #true", 1);
+    test_bool_output(p, env, "&& #false #true", 0);
+    test_bool_output(p, env, "&& #true #false", 0);
+    test_bool_output(p, env, "&& #false #false", 0);
+    test_bool_output(p, env, "&& 1 1", 1);
+    test_bool_output(p, env, "&& 0 1", 0);
+    test_bool_output(p, env, "&& 1 0", 0);
+    test_bool_output(p, env, "&& 0 0", 0);
+    test_bool_output(p, env, "&& 1 1 1 1 1", 1);
+    test_bool_output(p, env, "&& 0 1 1 1 1", 0);
+    test_bool_output(p, env, "&& 0 1 0 1 1", 0);
+    test_bool_output(p, env, "&& 1 1 1 1 0", 0);
+    test_bool_output(p, env, "&& 0 0 0 0 0", 0);
+    test_bool_output(p, env, "&& 0 (/ 1 0)", 0);
+
+    test_error_output(p, env, "&& 1 (/ 1 0)", "division by zero");
+    test_error_output(p, env, "&& + -", "can't cast function to bool");
+}
+
+static void test_or(parser* p, environment* env) {
+    test_bool_output(p, env, "|| #true", 1);
+    test_bool_output(p, env, "|| #false", 0);
+    test_bool_output(p, env, "|| 1", 1);
+    test_bool_output(p, env, "|| 0", 0);
+    test_bool_output(p, env, "|| #true #true", 1);
+    test_bool_output(p, env, "|| #false #true", 1);
+    test_bool_output(p, env, "|| #true #false", 1);
+    test_bool_output(p, env, "|| #false #false", 0);
+    test_bool_output(p, env, "|| 1 1", 1);
+    test_bool_output(p, env, "|| 0 1", 1);
+    test_bool_output(p, env, "|| 1 0", 1);
+    test_bool_output(p, env, "|| 0 0", 0);
+    test_bool_output(p, env, "|| 1 1 1 1 1", 1);
+    test_bool_output(p, env, "|| 0 1 1 1 1", 1);
+    test_bool_output(p, env, "|| 0 1 0 1 1", 1);
+    test_bool_output(p, env, "|| 1 1 1 1 0", 1);
+    test_bool_output(p, env, "|| 1 0 0 0 0", 1);
+    test_bool_output(p, env, "|| 0 0 0 0 1", 1);
+    test_bool_output(p, env, "|| 0 0 0 0 0", 0);
+    test_bool_output(p, env, "|| 1 (/ 1 0)", 1);
+
+    test_error_output(p, env, "|| 0 (/ 1 0)", "division by zero");
+    test_error_output(p, env, "|| + -", "can't cast function to bool");
+}
+
+static void test_not(parser* p, environment* env) {
+    test_bool_output(p, env, "! #true", 0);
+    test_bool_output(p, env, "! #false", 1);
+    test_bool_output(p, env, "! 1", 0);
+    test_bool_output(p, env, "! 0", 1);
+
+    test_error_output(p, env, "! 0 1", "expects exactly 1 arg");
+    test_error_output(p, env, "! (/ 1 0)", "division by zero");
+    test_error_output(p, env, "! +", "can't cast function to bool");
 }
 
 void run_test(parser* p) {
@@ -708,8 +769,8 @@ void run_test(parser* p) {
     RUN_TEST_FN(test_lambda, p);
     RUN_TEST_FN(test_parent_env, p);
     RUN_TEST_FN(test_function_call, p);
-
     RUN_TEST_FN(test_fn, p);
+
     RUN_TEST_FN(test_eq, p);
     RUN_TEST_FN(test_neq, p);
     RUN_TEST_FN(test_gt, p);
@@ -719,6 +780,11 @@ void run_test(parser* p) {
     RUN_TEST_FN(test_null_q, p);
     RUN_TEST_FN(test_zero_q, p);
     RUN_TEST_FN(test_list_q, p);
+
     RUN_TEST_FN(test_if, p);
     RUN_TEST_FN(test_cond, p);
+
+    RUN_TEST_FN(test_and, p);
+    RUN_TEST_FN(test_or, p);
+    RUN_TEST_FN(test_not, p);
 }

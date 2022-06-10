@@ -1,5 +1,6 @@
 #include "eval.h"
 
+#include <assert.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -548,6 +549,43 @@ static value* builtin_cond(value** args, size_t num_args, char* name, environmen
     return value_new_qexpr();
 }
 
+static value* builtin_logical(value** args, size_t num_args, char* name, environment* env, int short_circuit) {
+    for (size_t i = 0; i < num_args; i++) {
+        value* evaled = value_evaluate(args[i], env);
+        if (evaled->type == VALUE_ERROR) {
+            return evaled;
+        }
+
+        value* truth = value_to_bool(evaled);
+        value_dispose(evaled);
+        if (truth->type == VALUE_ERROR || truth->number == short_circuit) {
+            return truth;
+        }
+        value_dispose(truth);
+    }
+
+    return value_new_bool(1 - short_circuit);
+}
+
+static value* builtin_and(value** args, size_t num_args, char* name, environment* env) {
+    return builtin_logical(args, num_args, name, env, 0);
+}
+
+static value* builtin_or(value** args, size_t num_args, char* name, environment* env) {
+    return builtin_logical(args, num_args, name, env, 1);
+}
+
+static value* builtin_not(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+
+    value* truth = value_to_bool(args[0]);
+    if (truth->type == VALUE_BOOL) {
+        truth->number = 1 - truth->number;
+    }
+
+    return truth;
+}
+
 static value* call_lambda(value* lambda, value** args, size_t num_args, environment* env) {
     char* name = (lambda->symbol != NULL) ? lambda->symbol : "lambda";
 
@@ -584,44 +622,74 @@ static value* call_lambda(value* lambda, value** args, size_t num_args, environm
     return result;
 }
 
+static int is_delayed_evaluation_function(value* fn) {
+    assert(fn->type == VALUE_FUNCTION);
+
+    if (fn->builtin == builtin_and || fn->builtin == builtin_or) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 value* value_evaluate(value* v, environment* env) {
     if (v->type == VALUE_SEXPR) {
+        char buffer[1024];
         value* result = NULL;
+
         value* temp = value_new_sexpr();
+        if (v->num_children == 0) {
+            return temp;
+        }
 
-        for (size_t i = 0; i < v->num_children; i++) {
-            value* evaled = value_evaluate(v->children[i], env);
-
-            if (evaled->type == VALUE_ERROR) {
-                result = evaled;
-                break;
+        value* child = NULL;
+        if (result == NULL) {
+            child = value_evaluate(v->children[0], env);
+            if (child->type == VALUE_ERROR) {
+                result = child;
             } else {
-                value_add_child(temp, evaled);
+                value_add_child(temp, child);
             }
         }
 
         if (result == NULL) {
-            if (temp->num_children == 0) {
-                return temp;
-            } else if (temp->num_children == 1) {
+            if (v->num_children == 1) {
                 result = temp->children[0];
-                temp->children[0] = NULL;
+                temp->children[0] = NULL;  // don't dispose
             }
         }
 
+        value* fn = NULL;
         if (result == NULL) {
-            char buffer[1024];
-            value* fn = temp->children[0];
-
+            fn = temp->children[0];
             if (fn->type != VALUE_FUNCTION) {
                 value_to_str(v, buffer);
                 result = value_new_error("s-expr %s must start with a function", buffer);
-            } else {
-                if (fn->builtin != NULL) {
-                    result = fn->builtin(temp->children + 1, temp->num_children - 1, fn->symbol, env);
+            }
+        }
+
+        if (result == NULL) {
+            for (size_t i = 1; i < v->num_children; i++) {
+                if (is_delayed_evaluation_function(fn)) {
+                    child = value_copy(v->children[i]);
                 } else {
-                    result = call_lambda(fn, temp->children + 1, temp->num_children - 1, env);
+                    child = value_evaluate(v->children[i], env);
                 }
+
+                if (child->type == VALUE_ERROR) {
+                    result = child;
+                    break;
+                } else {
+                    value_add_child(temp, child);
+                }
+            }
+        }
+
+        if (result == NULL) {
+            if (fn->builtin != NULL) {
+                result = fn->builtin(temp->children + 1, temp->num_children - 1, fn->symbol, env);
+            } else {
+                result = call_lambda(fn, temp->children + 1, temp->num_children - 1, env);
             }
         }
 
@@ -697,4 +765,12 @@ void environment_register_builtins(environment* e) {
     environment_register_function(e, "if", builtin_if);
     environment_register_function(e, "cond", builtin_cond);
     environment_register_function(e, "switch", builtin_cond);
+
+    // logical functions
+    environment_register_function(e, "&&", builtin_and);
+    environment_register_function(e, "and", builtin_and);
+    environment_register_function(e, "||", builtin_or);
+    environment_register_function(e, "or", builtin_or);
+    environment_register_function(e, "!", builtin_not);
+    environment_register_function(e, "not", builtin_not);
 }
