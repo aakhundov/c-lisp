@@ -700,7 +700,14 @@ static void test_cond(parser* p, environment* env) {
 }
 
 static void test_recursion(parser* p, environment* env) {
-    test_info_output(p, env, "fn {fact n} {if (<= n 1) {1} {* n (fact (- n 1))}}", "defined: fact");
+    test_info_output(p, env,
+                     "\n"
+                     "fn {fact n} {\n"
+                     "  if (<= n 1)\n"
+                     "    {1}\n"
+                     "    {* n (fact (- n 1))}\n"
+                     "}\n",
+                     "defined: fact");
     test_number_output(p, env, "fact 1", 1);
     test_number_output(p, env, "fact 3", 6);
     test_number_output(p, env, "fact 5", 120);
@@ -708,16 +715,23 @@ static void test_recursion(parser* p, environment* env) {
     test_number_output(p, env, "fact 0", 1);
     test_number_output(p, env, "fact -10", 1);
 
-    test_info_output(p, env, "fn {length lst} {if (null? lst) {0} {+ 1 (length (tail lst))}}", "defined: length");
+    test_info_output(p, env,
+                     "\n"
+                     "fn {length lst} {\n"
+                     "  if (null? lst)\n"
+                     "    {0}\n"
+                     "    {+ 1 (length (tail lst))}\n"
+                     "}\n",
+                     "defined: length");
     test_number_output(p, env, "length {}", 0);
     test_number_output(p, env, "length {a}", 1);
     test_number_output(p, env, "length {1 2 3}", 3);
     test_number_output(p, env, "length {{1 2} 3 {4 5 6}}", 3);
 
     test_info_output(p, env,
+                     "\n"
                      "fn {reverse lst} {\n"
-                     "  if\n"
-                     "    (null? lst)\n"
+                     "  if (null? lst)\n"
                      "    {{}}\n"
                      "    {join (reverse (tail lst)) (head lst)}\n"
                      "}\n",
@@ -743,7 +757,14 @@ static void test_recursion(parser* p, environment* env) {
     test_full_output(p, env, "flatten {{1 2} {3 4 5}}", "{1 2 3 4 5}");
     test_full_output(p, env, "flatten {{{1} 2} {3 {{4} 5}}}", "{1 2 3 4 5}");
 
-    test_info_output(p, env, "fn {nth lst n} {if (== n 1) {car lst} {nth (cdr lst) (- n 1)}}", "defined: nth");
+    test_info_output(p, env,
+                     "\n"
+                     "fn {nth lst n} {\n"
+                     "  if (== n 1)\n"
+                     "    {car lst}\n"
+                     "    {nth (cdr lst) (- n 1)}\n"
+                     "}\n",
+                     "defined: nth");
     test_number_output(p, env, "nth {1} 1", 1);
     test_number_output(p, env, "nth {1 2 3} 1", 1);
     test_number_output(p, env, "nth {1 2 3} 2", 2);
