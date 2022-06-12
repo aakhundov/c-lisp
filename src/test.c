@@ -185,6 +185,14 @@ static void test_string(parser* p, environment* env) {
     test_full_output(p, env, "\"abc\\0def\"", "\"abc\"");
 }
 
+static void test_comment(parser* p, environment* env) {
+    test_full_output(p, env, ";", "()");
+    test_full_output(p, env, "; comment", "()");
+    test_number_output(p, env, "1 ; comment", 1);
+    test_full_output(p, env, "+; comment", "<builtin +>");
+    test_number_output(p, env, "+ 1 2 3 ; comment", 6);
+}
+
 static void test_list(parser* p, environment* env) {
     test_full_output(p, env, "list 1 2 3", "{1 2 3}");
     test_full_output(p, env, "list {1 2 3}", "{{1 2 3}}");
@@ -892,6 +900,7 @@ void run_test(parser* p) {
     RUN_TEST_FN(test_full, p);
     RUN_TEST_FN(test_special, p);
     RUN_TEST_FN(test_string, p);
+    RUN_TEST_FN(test_comment, p);
 
     RUN_TEST_FN(test_list, p);
     RUN_TEST_FN(test_first, p);

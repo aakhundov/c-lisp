@@ -240,7 +240,8 @@ static value* value_read_expr(tree* t) {
             strcmp(child.content, ")") == 0 ||
             strcmp(child.content, "{") == 0 ||
             strcmp(child.content, "}") == 0 ||
-            strcmp(child.tag, "regex") == 0) {
+            strcmp(child.tag, "regex") == 0 ||
+            strstr(child.tag, "comment")) {
             continue;
         }
 

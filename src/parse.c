@@ -10,10 +10,11 @@ static const char* GRAMMAR =
     symbol         : /[a-zA-Z0-9_+\\-*\\/%\\^\\\\=<>!&|\\?]+/ ; \
     special        : \"#true\" | \"#false\" | \"#null\"; \
     string         : /\"(\\\\.|[^\"])*\"/ ; \
+    comment        : /;[^\\r\\n]*/ ; \
     sexpr          : '(' <expr>* ')' ; \
     qexpr          : '{' <expr>* '}' ; \
-    expr           : <number> | <symbol> | <special> | \
-                     <string> | <sexpr> | <qexpr> ; \
+    expr           : <number> | <symbol> | <special> | <string> | \
+                     <comment> | <sexpr> | <qexpr> ; \
     program        : /^/ <expr>* /$/ ; \
     ";
 
@@ -33,6 +34,7 @@ void parser_init(parser* p) {
     p->sym = mpc_new("symbol");
     p->spec = mpc_new("special");
     p->str = mpc_new("string");
+    p->cmnt = mpc_new("comment");
     p->sexpr = mpc_new("sexpr");
     p->qexpr = mpc_new("qexpr");
     p->expr = mpc_new("expr");
@@ -40,13 +42,13 @@ void parser_init(parser* p) {
 
     mpca_lang(
         MPCA_LANG_DEFAULT, GRAMMAR,
-        p->num, p->sym, p->spec, p->str, p->sexpr, p->qexpr, p->expr, p->prog);
+        p->num, p->sym, p->spec, p->str, p->cmnt, p->sexpr, p->qexpr, p->expr, p->prog);
 }
 
 void parser_dispose(parser* p) {
     mpc_cleanup(
-        8,
-        p->num, p->sym, p->spec, p->str, p->sexpr, p->qexpr, p->expr, p->prog);
+        9,
+        p->num, p->sym, p->spec, p->str, p->cmnt, p->sexpr, p->qexpr, p->expr, p->prog);
 }
 
 int parser_parse(parser* p, char* input, result* r) {
