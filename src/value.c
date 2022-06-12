@@ -8,6 +8,8 @@
 #include "parse.h"
 #include "str.h"
 
+static value* value_from_tree(parser_tree* t);
+
 value* value_new_number(double number) {
     value* v = malloc(sizeof(value));
 
@@ -225,7 +227,7 @@ static value* value_read_string(char* content) {
     return result;
 }
 
-static value* value_read_expr(tree* t) {
+static value* value_read_expr(parser_tree* t) {
     value* expr = NULL;
     if (strcmp(t->tag, ">") == 0 || strstr(t->tag, "sexpr")) {
         expr = value_new_sexpr();
@@ -234,7 +236,7 @@ static value* value_read_expr(tree* t) {
     }
 
     for (size_t i = 0; i < t->num_children; i++) {
-        tree child = tree_get_child(t, i);
+        parser_tree child = parser_tree_get_child(t, i);
 
         if (strcmp(child.content, "(") == 0 ||
             strcmp(child.content, ")") == 0 ||
@@ -251,7 +253,7 @@ static value* value_read_expr(tree* t) {
     return expr;
 }
 
-value* value_from_tree(tree* t) {
+static value* value_from_tree(parser_tree* t) {
     if (strstr(t->tag, "number")) {
         return value_read_number(t->content);
     } else if (strstr(t->tag, "symbol")) {
@@ -263,6 +265,24 @@ value* value_from_tree(tree* t) {
     } else {
         return value_read_expr(t);
     }
+}
+
+value* value_parse(char* input, parser* p) {
+    value* v = NULL;
+
+    parser_result r;
+    if (parser_parse(p, input, &r)) {
+        parser_tree t = parser_result_get_tree(&r);
+        v = value_from_tree(&t);
+        parser_result_dispose_tree(&r);
+    } else {
+        char buffer[1024];
+        parser_result_get_error(&r, buffer);
+        v = value_new_error("parsing error: %s", buffer);
+        parser_result_dispose_error(&r);
+    }
+
+    return v;
 }
 
 value* value_copy(value* v) {

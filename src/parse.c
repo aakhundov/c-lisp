@@ -1,5 +1,7 @@
 #include "parse.h"
 
+#include <string.h>
+
 #include "mpc.h"
 
 static const char* GRAMMAR =
@@ -18,8 +20,8 @@ static const char* GRAMMAR =
     program        : /^/ <expr>* /$/ ; \
     ";
 
-static tree wrap_mpc_tree(mpc_ast_t* ast) {
-    tree t;
+static parser_tree wrap_mpc_tree(mpc_ast_t* ast) {
+    parser_tree t;
 
     t.tag = ast->tag;
     t.content = ast->contents;
@@ -51,30 +53,31 @@ void parser_dispose(parser* p) {
         p->num, p->sym, p->spec, p->str, p->cmnt, p->sexpr, p->qexpr, p->expr, p->prog);
 }
 
-int parser_parse(parser* p, char* input, result* r) {
+int parser_parse(parser* p, char* input, parser_result* r) {
     return mpc_parse("<stdin>", input, p->prog, &(r->res));
 }
 
-tree result_get_tree(result* r) {
+parser_tree parser_result_get_tree(parser_result* r) {
     return wrap_mpc_tree(r->res.output);
 }
 
-void result_print_tree(result* r) {
-    mpc_ast_print(r->res.output);
+int parser_result_get_error(parser_result* r, char* buffer) {
+    char* err = mpc_err_string(r->res.error);
+    err[strlen(err) - 1] = '\0';  // remove \n
+    int result = sprintf(buffer, "%s", err);
+    free(err);
+
+    return result;
 }
 
-void result_print_error(result* r) {
-    mpc_err_print(r->res.error);
-}
-
-void result_dispose_tree(result* r) {
+void parser_result_dispose_tree(parser_result* r) {
     mpc_ast_delete(r->res.output);
 }
 
-void result_dispose_error(result* r) {
+void parser_result_dispose_error(parser_result* r) {
     mpc_err_delete(r->res.error);
 }
 
-tree tree_get_child(tree* t, size_t index) {
+parser_tree parser_tree_get_child(parser_tree* t, size_t index) {
     return wrap_mpc_tree(t->ast->children[index]);
 }

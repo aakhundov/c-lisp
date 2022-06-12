@@ -48,22 +48,16 @@ static command_type get_command_type(char* line) {
 static void process_repl_command(parser* p, environment* env, char* input, char* output) {
     add_history(input);
 
-    result r;
-    if (parser_parse(p, input, &r)) {
-        tree t = result_get_tree(&r);
-        value* v = value_from_tree(&t);
+    value* v = value_parse(input, p);
+    if (v->type != VALUE_ERROR) {
         value* e = value_evaluate(v, env);
-
-        value_to_str(e, output);
-        printf("%s\n", output);
-
-        value_dispose(e);
         value_dispose(v);
-        result_dispose_tree(&r);
-    } else {
-        result_print_error(&r);
-        result_dispose_error(&r);
+        v = e;
     }
+
+    value_to_str(v, output);
+    printf("%s\n", output);
+    value_dispose(v);
 }
 
 void run_repl(parser* p, environment* env) {

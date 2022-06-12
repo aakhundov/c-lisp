@@ -22,30 +22,30 @@
 static int counter = 0;
 
 static value* get_evaluated(parser* p, environment* env, char* input) {
-    result r;
-    char output[128];
+    char output[1024];
 
-    if (parser_parse(p, input, &r)) {
-        tree t = result_get_tree(&r);
-        value* v = value_from_tree(&t);
+    int parsed = 1;
+    value* v = value_parse(input, p);
+    if (v->type != VALUE_ERROR) {
         value* e = value_evaluate(v, env);
-
-        result_dispose_tree(&r);
         value_dispose(v);
-
-        value_to_str(e, output);
-        printf(
-            "\x1B[34m%-5d\x1B[0m "
-            "\x1B[34m[\x1B[0m%s\x1B[34m]\x1B[0m "
-            "\x1B[34m-->\x1B[0m "
-            "\x1B[34m[\x1B[0m%s\x1B[34m]\x1B[0m\n",
-            ++counter, input, output);
-
-        return e;
+        v = e;
     } else {
-        result_print_error(&r);
-        result_dispose_error(&r);
+        parsed = 0;
+    }
 
+    value_to_str(v, output);
+    printf(
+        "\x1B[34m%-5d\x1B[0m "
+        "\x1B[34m[\x1B[0m%s\x1B[34m]\x1B[0m "
+        "\x1B[34m-->\x1B[0m "
+        "\x1B[34m[\x1B[0m%s\x1B[34m]\x1B[0m\n",
+        ++counter, input, output);
+
+    if (parsed) {
+        return v;
+    } else {
+        value_dispose(v);
         exit(1);
     }
 }
