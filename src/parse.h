@@ -7,6 +7,7 @@ typedef struct {
     mpc_parser_t* num;
     mpc_parser_t* sym;
     mpc_parser_t* spec;
+    mpc_parser_t* str;
     mpc_parser_t* sexpr;
     mpc_parser_t* qexpr;
     mpc_parser_t* expr;

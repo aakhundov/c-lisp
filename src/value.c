@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "parse.h"
+#include "str.h"
 
 value* value_new_number(double number) {
     value* v = malloc(sizeof(value));
@@ -51,6 +52,16 @@ value* value_new_info(char* info, ...) {
     va_end(args);
 
     v->type = VALUE_INFO;
+
+    return v;
+}
+
+value* value_new_string(char* symbol) {
+    value* v = malloc(sizeof(value));
+
+    v->type = VALUE_STRING;
+    v->symbol = malloc(strlen(symbol) + 1);
+    strcpy(v->symbol, symbol);
 
     return v;
 }
@@ -137,6 +148,7 @@ void value_dispose(value* v) {
         case VALUE_SYMBOL:
         case VALUE_ERROR:
         case VALUE_INFO:
+        case VALUE_STRING:
             free(v->symbol);
             break;
         case VALUE_BOOL:
@@ -178,51 +190,77 @@ void value_add_child(value* parent, value* child) {
     parent->num_children++;
 }
 
+static value* value_read_number(char* content) {
+    errno = 0;
+    double result = strtod(content, NULL);
+
+    if (errno == 0) {
+        return value_new_number(result);
+    } else {
+        return value_new_error("malformed number: %s", content);
+    }
+}
+
+static value* value_read_special(char* content) {
+    if (strcmp(content, "#true") == 0) {
+        return value_new_bool(1);
+    } else if (strcmp(content, "#false") == 0) {
+        return value_new_bool(0);
+    } else if (strcmp(content, "#null") == 0) {
+        return value_new_qexpr();
+    } else {
+        return value_new_error("unknown special symbol: %s", content);
+    }
+}
+
+static value* value_read_string(char* content) {
+    size_t len = strlen(content);
+    content[len - 1] = '\0';  // remove trailing quote
+    content++;                // remove leading quote
+
+    char* unescaped = str_unescape(content);
+    value* result = value_new_string(unescaped);
+    free(unescaped);
+
+    return result;
+}
+
+static value* value_read_expr(tree* t) {
+    value* expr = NULL;
+    if (strcmp(t->tag, ">") == 0 || strstr(t->tag, "sexpr")) {
+        expr = value_new_sexpr();
+    } else if (strstr(t->tag, "qexpr")) {
+        expr = value_new_qexpr();
+    }
+
+    for (size_t i = 0; i < t->num_children; i++) {
+        tree child = tree_get_child(t, i);
+
+        if (strcmp(child.content, "(") == 0 ||
+            strcmp(child.content, ")") == 0 ||
+            strcmp(child.content, "{") == 0 ||
+            strcmp(child.content, "}") == 0 ||
+            strcmp(child.tag, "regex") == 0) {
+            continue;
+        }
+
+        value_add_child(expr, value_from_tree(&child));
+    }
+
+    return expr;
+}
+
 value* value_from_tree(tree* t) {
     if (strstr(t->tag, "number")) {
-        errno = 0;
-        double result = strtod(t->content, NULL);
-
-        if (errno == 0) {
-            return value_new_number(result);
-        } else {
-            return value_new_error("malformed number: %s", t->content);
-        }
+        return value_read_number(t->content);
     } else if (strstr(t->tag, "symbol")) {
         return value_new_symbol(t->content);
-    } else if (strstr(t->tag, "spec")) {
-        if (strcmp(t->content, "#true") == 0) {
-            return value_new_bool(1);
-        } else if (strcmp(t->content, "#false") == 0) {
-            return value_new_bool(0);
-        } else if (strcmp(t->content, "#null") == 0) {
-            return value_new_qexpr();
-        } else {
-            return value_new_error("unknown special symbol: %s", t->content);
-        }
+    } else if (strstr(t->tag, "special")) {
+        return value_read_special(t->content);
+    } else if (strstr(t->tag, "string")) {
+        return value_read_string(t->content);
     } else {
-        value* expr = NULL;
-        if (strcmp(t->tag, ">") == 0 || strstr(t->tag, "sexpr")) {
-            expr = value_new_sexpr();
-        } else if (strstr(t->tag, "qexpr")) {
-            expr = value_new_qexpr();
-        }
-
-        for (size_t i = 0; i < t->num_children; i++) {
-            tree child = tree_get_child(t, i);
-
-            if (strcmp(child.content, "(") == 0 ||
-                strcmp(child.content, ")") == 0 ||
-                strcmp(child.content, "{") == 0 ||
-                strcmp(child.content, "}") == 0 ||
-                strcmp(child.tag, "regex") == 0) {
-                continue;
-            }
-
-            value_add_child(expr, value_from_tree(&child));
-        }
-
-        return expr;
+        return value_read_expr(t);
     }
 }
 
@@ -241,6 +279,9 @@ value* value_copy(value* v) {
             break;
         case VALUE_INFO:
             result = value_new_info(v->symbol);
+            break;
+        case VALUE_STRING:
+            result = value_new_string(v->symbol);
             break;
         case VALUE_BOOL:
             result = value_new_bool(v->number);
@@ -262,20 +303,12 @@ value* value_copy(value* v) {
     return result;
 }
 
-static int expr_to_str(value* v, char* buffer, char open, char close) {
-    char* running = buffer;
+static int string_to_str(value* v, char* buffer) {
+    char* escaped = str_escape(v->symbol);
+    int result = sprintf(buffer, "\"%s\"", escaped);
+    free(escaped);
 
-    running += sprintf(running, "%c", open);
-    for (size_t i = 0; i < v->num_children; i++) {
-        running += value_to_str(v->children[i], running);
-        if (i < v->num_children - 1) {
-            running += sprintf(running, "%c", ' ');
-        }
-    }
-    running += sprintf(running, "%c", close);
-    *running = '\0';
-
-    return running - buffer;
+    return result;
 }
 
 static int function_to_str(value* v, char* buffer) {
@@ -292,6 +325,22 @@ static int function_to_str(value* v, char* buffer) {
     }
 }
 
+static int expr_to_str(value* v, char* buffer, char open, char close) {
+    char* running = buffer;
+
+    running += sprintf(running, "%c", open);
+    for (size_t i = 0; i < v->num_children; i++) {
+        running += value_to_str(v->children[i], running);
+        if (i < v->num_children - 1) {
+            running += sprintf(running, "%c", ' ');
+        }
+    }
+    running += sprintf(running, "%c", close);
+    *running = '\0';
+
+    return running - buffer;
+}
+
 int value_to_str(value* v, char* buffer) {
     switch (v->type) {
         case VALUE_NUMBER:
@@ -302,6 +351,8 @@ int value_to_str(value* v, char* buffer) {
             return sprintf(buffer, "\x1B[31m%s\x1B[0m", v->symbol);
         case VALUE_INFO:
             return sprintf(buffer, "\x1B[32m%s\x1B[0m", v->symbol);
+        case VALUE_STRING:
+            return string_to_str(v, buffer);
         case VALUE_BOOL:
             return sprintf(buffer, "%s", (v->number == 1) ? "#true" : "#false");
         case VALUE_FUNCTION:
@@ -320,6 +371,7 @@ value* value_to_bool(value* v) {
         case VALUE_NUMBER:
             return value_new_bool((v->number != 0) ? 1 : 0);
         case VALUE_SYMBOL:
+        case VALUE_STRING:
             return value_new_bool((v->symbol != NULL && strlen(v->symbol) > 0) ? 1 : 0);
         case VALUE_ERROR:
             return value_new_error(v->symbol);
@@ -359,6 +411,7 @@ value* value_compare(value* v1, value* v2) {
                 }
                 break;
             case VALUE_SYMBOL:
+            case VALUE_STRING:
                 result = value_new_number(strcmp(v1->symbol, v2->symbol));
                 break;
             case VALUE_ERROR:
@@ -411,6 +464,7 @@ value* value_equals(value* v1, value* v2) {
             case VALUE_SYMBOL:
             case VALUE_ERROR:
             case VALUE_INFO:
+            case VALUE_STRING:
                 result = value_new_bool(strcmp(v1->symbol, v2->symbol) == 0 ? 1 : 0);
                 break;
             case VALUE_BOOL:
@@ -475,6 +529,8 @@ char* get_value_type_name(value_type t) {
             return "error";
         case VALUE_INFO:
             return "info";
+        case VALUE_STRING:
+            return "string";
         case VALUE_BOOL:
             return "bool";
         case VALUE_FUNCTION:

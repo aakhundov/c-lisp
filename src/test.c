@@ -34,7 +34,12 @@ static value* get_evaluated(parser* p, environment* env, char* input) {
         value_dispose(v);
 
         value_to_str(e, output);
-        printf("%-5d \"%s\" --> \"%s\"\n", ++counter, input, output);
+        printf(
+            "\x1B[34m%-5d\x1B[0m "
+            "\x1B[34m[\x1B[0m%s\x1B[34m]\x1B[0m "
+            "\x1B[34m-->\x1B[0m "
+            "\x1B[34m[\x1B[0m%s\x1B[34m]\x1B[0m\n",
+            ++counter, input, output);
 
         return e;
     } else {
@@ -139,7 +144,7 @@ static void test_errors(parser* p, environment* env) {
     test_error_output(p, env, "+ 1 2 3 {4 5}", "arg #3 ({4 5}) must be of type number");
 }
 
-static void test_str(parser* p, environment* env) {
+static void test_full(parser* p, environment* env) {
     test_full_output(p, env, "", "()");
     test_full_output(p, env, "  ", "()");
     test_full_output(p, env, "+", "<builtin +>");
@@ -161,6 +166,23 @@ static void test_special(parser* p, environment* env) {
     test_full_output(p, env, "#true", "#true");
     test_full_output(p, env, "#false", "#false");
     test_full_output(p, env, "#null", "{}");
+}
+
+static void test_string(parser* p, environment* env) {
+    test_full_output(p, env, "\"\"", "\"\"");
+    test_full_output(p, env, "\"a\"", "\"a\"");
+    test_full_output(p, env, "\" \"", "\" \"");
+    test_full_output(p, env, "\"   \"", "\"   \"");
+    test_full_output(p, env, "\"abc\"", "\"abc\"");
+    test_full_output(p, env, "\"abc def\"", "\"abc def\"");
+    test_full_output(p, env, "\"abc\\\"def\"", "\"abc\\\"def\"");
+    test_full_output(p, env, "\"\\\"\"", "\"\\\"\"");
+    test_full_output(p, env, "\" \\\"\\\"  \"", "\" \\\"\\\"  \"");
+    test_full_output(p, env, "\"'abc'\"", "\"'abc'\"");
+    test_full_output(p, env, "\"abc\\n\"", "\"abc\\n\"");
+    test_full_output(p, env, "\"\\r\\n\"", "\"\\r\\n\"");
+    test_full_output(p, env, "\"abc\\ndef\"", "\"abc\\ndef\"");
+    test_full_output(p, env, "\"abc\\0def\"", "\"abc\"");
 }
 
 static void test_list(parser* p, environment* env) {
@@ -788,7 +810,14 @@ static void test_recursion(parser* p, environment* env) {
     test_bool_output(p, env, "present? {+ {-} *} {-}", 1);
     test_bool_output(p, env, "present? {} 1", 0);
 
-    test_info_output(p, env, "fn {last lst} {if (== (len lst) 1) {car lst} {last (cdr lst)}}", "defined: last");
+    test_info_output(p, env,
+                     "\n"
+                     "fn {last lst} {\n"
+                     "  if (== (len lst) 1)\n"
+                     "    {car lst}\n"
+                     "    {last (cdr lst)}\n"
+                     "}\n",
+                     "defined: last");
     test_number_output(p, env, "last {1 2 3}", 3);
     test_number_output(p, env, "last {1}", 1);
     test_error_output(p, env, "last {}", "must be at least 1-long");
@@ -860,8 +889,9 @@ void run_test(parser* p) {
 
     RUN_TEST_FN(test_numeric, p);
     RUN_TEST_FN(test_errors, p);
-    RUN_TEST_FN(test_str, p);
+    RUN_TEST_FN(test_full, p);
     RUN_TEST_FN(test_special, p);
+    RUN_TEST_FN(test_string, p);
 
     RUN_TEST_FN(test_list, p);
     RUN_TEST_FN(test_first, p);

@@ -8,10 +8,11 @@ typedef enum {
     VALUE_SYMBOL = 1,
     VALUE_ERROR = 2,
     VALUE_INFO = 3,
-    VALUE_BOOL = 4,
-    VALUE_FUNCTION = 5,
-    VALUE_SEXPR = 6,
-    VALUE_QEXPR = 7
+    VALUE_STRING = 4,
+    VALUE_BOOL = 5,
+    VALUE_FUNCTION = 6,
+    VALUE_SEXPR = 7,
+    VALUE_QEXPR = 8
 } value_type;
 
 typedef struct value value;
