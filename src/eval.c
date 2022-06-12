@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -608,6 +609,50 @@ static value* builtin_del(value** args, size_t num_args, char* name, environment
     }
 }
 
+static value* builtin_seval(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_STRING, 0);
+
+    int batch = 0;
+    int verbose = 1;
+    if (num_args > 1) {
+        ASSERT_ARG_TYPE(name, args[1], VALUE_BOOL, 1);
+        batch = args[1]->number;
+        if (num_args > 2) {
+            ASSERT_ARG_TYPE(name, args[2], VALUE_BOOL, 2);
+            verbose = args[2]->number;
+        }
+    }
+
+    value* v = value_parse(args[0]->symbol);
+
+    if (v->type != VALUE_ERROR) {
+        if (batch) {
+            char buffer[1024];
+            size_t counter = 0;
+            size_t num_children = v->num_children;
+            for (size_t i = 0; i < num_children; i++) {
+                value* e = value_evaluate(v->children[i], env);
+                if (verbose) {
+                    value_to_str(e, buffer);
+                    printf("\x1B[32m%zu:\x1B[0m %s\n", ++counter, buffer);
+                }
+                value_dispose(e);
+            }
+            value_dispose(v);
+            v = value_new_info(
+                "evaluated %zu expression%s",
+                num_children, (num_children > 1 ? "s" : ""));
+        } else {
+            value* e = value_evaluate(v, env);
+            value_dispose(v);
+            v = e;
+        }
+    }
+
+    return v;
+}
+
 static value* call_lambda(value* lambda, value** args, size_t num_args, environment* env) {
     char* name = (lambda->symbol != NULL) ? lambda->symbol : "lambda";
 
@@ -796,4 +841,7 @@ void environment_register_builtins(environment* e) {
     environment_register_function(e, "or", builtin_or);
     environment_register_function(e, "!", builtin_not);
     environment_register_function(e, "not", builtin_not);
+
+    // string functions
+    environment_register_function(e, "seval", builtin_seval);
 }

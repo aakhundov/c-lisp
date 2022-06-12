@@ -897,6 +897,28 @@ static void test_not(environment* env) {
     test_error_output(env, "! +", "can't cast function to bool");
 }
 
+static void test_seval(environment* env) {
+    test_number_output(env, "seval \"0\"", 0);
+    test_number_output(env, "seval \"1\"", 1);
+    test_number_output(env, "seval \"-3.14\"", -3.14);
+    test_number_output(env, "seval \"+ 1 2 3\"", 6);
+    test_bool_output(env, "seval \"#true\"", 1);
+    test_bool_output(env, "seval \"#false\"", 0);
+    test_full_output(env, "seval \"\\\"\\\"\"", "\"\"");
+    test_full_output(env, "seval \"\\\"abc\\\"\"", "\"abc\"");
+    test_full_output(env, "seval \"{}\"", "{}");
+    test_full_output(env, "seval \"{+ 1 2 3}\"", "{+ 1 2 3}");
+    test_full_output(env, "seval \"(+ 1 2 3)\"", "6");
+    test_info_output(env, "seval \"1\" #true #false", "evaluated 1 expression");
+    test_info_output(env, "seval \"1 2 3\" #true #false", "evaluated 3 expressions");
+    test_info_output(env, "seval \"(fn {f x y} {* x y}) (f 2.71 3.14)\" #true", "evaluated 2 expressions");
+
+    test_error_output(env, "seval 1", "arg #0 (1) must be of type string");
+    test_error_output(env, "seval \"\" 1", "arg #1 (1) must be of type bool");
+    test_error_output(env, "seval \"\" #true 1", "arg #2 (1) must be of type bool");
+    test_error_output(env, "seval \"abc\"", "undefined symbol: abc");
+}
+
 void run_test() {
     counter = 0;
 
@@ -941,4 +963,6 @@ void run_test() {
     RUN_TEST_FN(test_and);
     RUN_TEST_FN(test_or);
     RUN_TEST_FN(test_not);
+
+    RUN_TEST_FN(test_seval);
 }
