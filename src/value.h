@@ -36,6 +36,7 @@ value* value_new_number(double number);
 value* value_new_symbol(char* symbol);
 value* value_new_error(char* error, ...);
 value* value_new_info(char* error, ...);
+value* value_new_string(char* symbol);
 value* value_new_bool(int truth);
 value* value_new_function(value* function);
 value* value_new_function_builtin(value_fn builtin, char* symbol);

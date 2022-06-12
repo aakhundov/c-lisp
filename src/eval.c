@@ -653,6 +653,37 @@ static value* builtin_seval(value** args, size_t num_args, char* name, environme
     return v;
 }
 
+static value* builtin_load(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_STRING, 0);
+
+    value* result = NULL;
+
+    char content[65536];
+    FILE* file = fopen(args[0]->symbol, "r");
+    if (file) {
+        int read = fread(content, 1, sizeof(content), file);
+        content[read] = '\0';  // guard against the old call stack
+        if (ferror(file)) {
+            result = value_new_error("error reading from file: %s", args[0]->symbol);
+        } else {
+            value* seval_args = value_new_sexpr();
+            value_add_child(seval_args, value_new_string(content));
+            value_add_child(seval_args, value_new_bool(1));  // batch
+            value_add_child(seval_args, value_new_bool(1));  // verbose
+
+            result = builtin_seval(seval_args->children, 3, name, env);
+
+            value_dispose(seval_args);
+        }
+        fclose(file);
+    } else {
+        result = value_new_error("failed to open file: %s", args[0]->symbol);
+    }
+
+    return result;
+}
+
 static value* call_lambda(value* lambda, value** args, size_t num_args, environment* env) {
     char* name = (lambda->symbol != NULL) ? lambda->symbol : "lambda";
 
@@ -844,4 +875,5 @@ void environment_register_builtins(environment* e) {
 
     // string functions
     environment_register_function(e, "seval", builtin_seval);
+    environment_register_function(e, "load", builtin_load);
 }

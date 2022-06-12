@@ -919,6 +919,18 @@ static void test_seval(environment* env) {
     test_error_output(env, "seval \"abc\"", "undefined symbol: abc");
 }
 
+static void test_load(environment* env) {
+    test_info_output(env, "load \"lib/test.txt\"", "evaluated 4 expressions");
+    test_number_output(env, "f-add 1 2", 3);
+    test_number_output(env, "f-sum {1 2 3}", 6);
+    test_number_output(env, "f-last {1 2 3 4 5}", 5);
+
+    test_error_output(env, "load 1", "arg #0 (1) must be of type string");
+    test_error_output(env, "load \"file.txt\" 1", "expects exactly 1 arg");
+    test_error_output(env, "load \"nonexistent.txt\"", "failed to open file");
+    test_error_output(env, "load \"lib/malformed.txt\"", "parsing error");
+}
+
 void run_test() {
     counter = 0;
 
@@ -965,4 +977,5 @@ void run_test() {
     RUN_TEST_FN(test_not);
 
     RUN_TEST_FN(test_seval);
+    RUN_TEST_FN(test_load);
 }

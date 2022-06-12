@@ -1,0 +1,18 @@
+"test library file"
+
+; add two numbers
+(fn {f-add x y} {+ x y})
+
+; sum a list of integers
+(fn {f-sum lst} {
+    if (== (len lst) 1)
+        {car lst}
+        {+ (car lst) (f-sum (cdr lst))}
+})
+
+; get last item in a list
+(fn {f-last lst} {
+    if (== (len lst) 1)
+        {car lst}
+        {f-last (cdr lst)}
+})
