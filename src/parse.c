@@ -4,6 +4,18 @@
 
 #include "mpc.h"
 
+typedef struct {
+    mpc_parser_t* num;
+    mpc_parser_t* sym;
+    mpc_parser_t* spec;
+    mpc_parser_t* str;
+    mpc_parser_t* cmnt;
+    mpc_parser_t* sexpr;
+    mpc_parser_t* qexpr;
+    mpc_parser_t* expr;
+    mpc_parser_t* prog;
+} parser;
+
 static const char* GRAMMAR =
     "\
     number         : /[+-]?[0-9]*\\.[0-9]*/ | \
@@ -20,6 +32,8 @@ static const char* GRAMMAR =
     program        : /^/ <expr>* /$/ ; \
     ";
 
+static parser* p;
+
 static parser_tree wrap_mpc_tree(mpc_ast_t* ast) {
     parser_tree t;
 
@@ -31,7 +45,9 @@ static parser_tree wrap_mpc_tree(mpc_ast_t* ast) {
     return t;
 }
 
-void parser_init(parser* p) {
+void parser_init() {
+    p = malloc(sizeof(parser));
+
     p->num = mpc_new("number");
     p->sym = mpc_new("symbol");
     p->spec = mpc_new("special");
@@ -47,13 +63,15 @@ void parser_init(parser* p) {
         p->num, p->sym, p->spec, p->str, p->cmnt, p->sexpr, p->qexpr, p->expr, p->prog);
 }
 
-void parser_dispose(parser* p) {
+void parser_dispose() {
     mpc_cleanup(
         9,
         p->num, p->sym, p->spec, p->str, p->cmnt, p->sexpr, p->qexpr, p->expr, p->prog);
+
+    free(p);
 }
 
-int parser_parse(parser* p, char* input, parser_result* r) {
+int parser_parse(char* input, parser_result* r) {
     return mpc_parse("<stdin>", input, p->prog, &(r->res));
 }
 

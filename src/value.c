@@ -267,11 +267,11 @@ static value* value_from_tree(parser_tree* t) {
     }
 }
 
-value* value_parse(char* input, parser* p) {
+value* value_parse(char* input) {
     value* v = NULL;
 
     parser_result r;
-    if (parser_parse(p, input, &r)) {
+    if (parser_parse(input, &r)) {
         parser_tree t = parser_result_get_tree(&r);
         v = value_from_tree(&t);
         parser_result_dispose_tree(&r);

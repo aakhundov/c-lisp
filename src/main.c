@@ -1,29 +1,19 @@
 #include <string.h>
 
-#include "env.h"
-#include "eval.h"
 #include "parse.h"
 #include "repl.h"
 #include "test.h"
 
 int main(int argc, char** argv) {
-    parser p;
-    environment e;
-
-    parser_init(&p);
+    parser_init();
 
     if (argc > 1 && strcmp(argv[1], "test") == 0) {
-        run_test(&p);
+        run_test();
     } else {
-        environment_init(&e);
-        environment_register_builtins(&e);
-
-        run_repl(&p, &e);
-
-        environment_dispose(&e);
+        run_repl();
     }
 
-    parser_dispose(&p);
+    parser_dispose();
 
     return 0;
 }

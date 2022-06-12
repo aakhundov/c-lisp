@@ -1,7 +1,7 @@
 #ifndef VALUE_H_
 #define VALUE_H_
 
-#include "parse.h"
+#include <stdlib.h>
 
 typedef enum {
     VALUE_NUMBER = 0,
@@ -43,7 +43,7 @@ value* value_new_function_lambda(value* args, value* body);
 value* value_new_sexpr();
 value* value_new_qexpr();
 
-value* value_parse(char* input, parser* p);
+value* value_parse(char* input);
 
 void value_dispose(value* v);
 

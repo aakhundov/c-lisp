@@ -7,7 +7,6 @@
 #include "edit.h"
 #include "env.h"
 #include "eval.h"
-#include "parse.h"
 #include "value.h"
 
 static const char* exit_commands[] = {"exit", "quit", "q"};
@@ -45,10 +44,10 @@ static command_type get_command_type(char* line) {
     return COMMAND_OTHER;
 }
 
-static void process_repl_command(parser* p, environment* env, char* input, char* output) {
+static void process_repl_command(environment* env, char* input, char* output) {
     add_history(input);
 
-    value* v = value_parse(input, p);
+    value* v = value_parse(input);
     if (v->type != VALUE_ERROR) {
         value* e = value_evaluate(v, env);
         value_dispose(v);
@@ -60,9 +59,13 @@ static void process_repl_command(parser* p, environment* env, char* input, char*
     value_dispose(v);
 }
 
-void run_repl(parser* p, environment* env) {
+void run_repl() {
     puts("mylisp version 0.0.1");
     puts("enter \"quit\" to quit\n");
+
+    environment env;
+    environment_init(&env);
+    environment_register_builtins(&env);
 
     int stop = 0;
     char output[16384];
@@ -78,15 +81,17 @@ void run_repl(parser* p, environment* env) {
                 printf("\e[1;1H\e[2J");
                 break;
             case COMMAND_ENV:
-                environment_to_str(env, output);
+                environment_to_str(&env, output);
                 printf("%s", output);
                 break;
             default:
-                process_repl_command(p, env, input, output);
+                process_repl_command(&env, input, output);
         }
 
         free(input);
     }
+
+    environment_dispose(&env);
 
     printf("\nbye!\n");
 }

@@ -487,9 +487,11 @@ static value* builtin_lte(value** args, size_t num_args, char* name, environment
 
 static value* builtin_null_q(value** args, size_t num_args, char* name, environment* env) {
     ASSERT_NUM_ARGS(name, num_args, 1);
-    ASSERT_ARG_TYPE(name, args[0], VALUE_QEXPR, 0);
 
-    return value_new_bool((args[0]->num_children == 0) ? 1 : 0);
+    value* result = value_to_bool(args[0]);
+    result->number = 1 - result->number;
+
+    return result;
 }
 
 static value* builtin_zero_q(value** args, size_t num_args, char* name, environment* env) {
