@@ -46,29 +46,34 @@ static parser_tree wrap_mpc_tree(mpc_ast_t* ast) {
 }
 
 void parser_init() {
-    p = malloc(sizeof(parser));
+    if (p == NULL) {
+        p = malloc(sizeof(parser));
 
-    p->num = mpc_new("number");
-    p->sym = mpc_new("symbol");
-    p->spec = mpc_new("special");
-    p->str = mpc_new("string");
-    p->cmnt = mpc_new("comment");
-    p->sexpr = mpc_new("sexpr");
-    p->qexpr = mpc_new("qexpr");
-    p->expr = mpc_new("expr");
-    p->prog = mpc_new("program");
+        p->num = mpc_new("number");
+        p->sym = mpc_new("symbol");
+        p->spec = mpc_new("special");
+        p->str = mpc_new("string");
+        p->cmnt = mpc_new("comment");
+        p->sexpr = mpc_new("sexpr");
+        p->qexpr = mpc_new("qexpr");
+        p->expr = mpc_new("expr");
+        p->prog = mpc_new("program");
 
-    mpca_lang(
-        MPCA_LANG_DEFAULT, GRAMMAR,
-        p->num, p->sym, p->spec, p->str, p->cmnt, p->sexpr, p->qexpr, p->expr, p->prog);
+        mpca_lang(
+            MPCA_LANG_DEFAULT, GRAMMAR,
+            p->num, p->sym, p->spec, p->str, p->cmnt, p->sexpr, p->qexpr, p->expr, p->prog);
+    }
 }
 
 void parser_dispose() {
-    mpc_cleanup(
-        9,
-        p->num, p->sym, p->spec, p->str, p->cmnt, p->sexpr, p->qexpr, p->expr, p->prog);
+    if (p != NULL) {
+        mpc_cleanup(
+            9,
+            p->num, p->sym, p->spec, p->str, p->cmnt, p->sexpr, p->qexpr, p->expr, p->prog);
 
-    free(p);
+        free(p);
+        p = NULL;
+    }
 }
 
 int parser_parse(char* input, parser_result* r) {
