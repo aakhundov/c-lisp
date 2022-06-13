@@ -46,6 +46,7 @@ static value* get_evaluated(environment* env, char* input) {
     if (parsed) {
         return v;
     } else {
+        printf("PARSING ERROR\n");
         value_dispose(v);
         exit(1);
     }
@@ -937,6 +938,7 @@ static void test_sjoin(environment* env) {
     test_full_output(env, "sjoin \"\" \"b\"", "\"b\"");
     test_full_output(env, "sjoin \"\" \"\"", "\"\"");
     test_full_output(env, "sjoin \"abc\"", "\"abc\"");
+    test_full_output(env, "sjoin \"\\n\\r\" \"\\n\"", "\"\\n\\r\\n\"");
 
     test_error_output(env, "sjoin 1", "arg #0 (1) must be of type string");
     test_error_output(env, "sjoin \"a\" 1", "arg #1 (1) must be of type string");
@@ -947,6 +949,7 @@ static void test_shead(environment* env) {
     test_full_output(env, "shead \" xyz\"", "\" \"");
     test_full_output(env, "shead \"xyz \"", "\"x\"");
     test_full_output(env, "shead \"x\"", "\"x\"");
+    test_full_output(env, "shead \"\\n\\r\\n\"", "\"\\n\"");
 
     test_error_output(env, "shead 1", "arg #0 (1) must be of type string");
     test_error_output(env, "shead \"a\" \"b\"", "expects exactly 1 arg");
@@ -958,6 +961,7 @@ static void test_stail(environment* env) {
     test_full_output(env, "stail \" xyz\"", "\"xyz\"");
     test_full_output(env, "stail \"xyz \"", "\"yz \"");
     test_full_output(env, "stail \"x\"", "\"\"");
+    test_full_output(env, "stail \"\\n\\r\\n\"", "\"\\r\\n\"");
 
     test_error_output(env, "stail 1", "arg #0 (1) must be of type string");
     test_error_output(env, "stail \"a\" \"b\"", "expects exactly 1 arg");
@@ -969,10 +973,24 @@ static void test_sinit(environment* env) {
     test_full_output(env, "sinit \" xyz\"", "\" xy\"");
     test_full_output(env, "sinit \"xyz \"", "\"xyz\"");
     test_full_output(env, "sinit \"x\"", "\"\"");
+    test_full_output(env, "sinit \"\\n\\r\\n\"", "\"\\n\\r\"");
 
     test_error_output(env, "sinit 1", "arg #0 (1) must be of type string");
     test_error_output(env, "sinit \"a\" \"b\"", "expects exactly 1 arg");
     test_error_output(env, "sinit \"\"", "arg #0 must be at least 1-long");
+}
+
+static void test_slen(environment* env) {
+    test_number_output(env, "slen \"abc\"", 3);
+    test_number_output(env, "slen \" xyz\"", 4);
+    test_number_output(env, "slen \"xyz \"", 4);
+    test_number_output(env, "slen \"x\"", 1);
+    test_number_output(env, "slen \"\"", 0);
+    test_number_output(env, "slen \"\\n\"", 1);
+    test_number_output(env, "slen \"\\n\\r\\n\"", 3);
+
+    test_error_output(env, "slen 1", "arg #0 (1) must be of type string");
+    test_error_output(env, "slen \"a\" \"b\"", "expects exactly 1 arg");
 }
 
 void run_test() {
@@ -1026,4 +1044,5 @@ void run_test() {
     RUN_TEST_FN(test_shead);
     RUN_TEST_FN(test_stail);
     RUN_TEST_FN(test_sinit);
+    RUN_TEST_FN(test_slen);
 }

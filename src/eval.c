@@ -784,6 +784,13 @@ static value* builtin_sinit(value** args, size_t num_args, char* name, environme
     return result;
 }
 
+static value* builtin_slen(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_STRING, 0);
+
+    return value_new_number(strlen(args[0]->symbol));
+}
+
 static value* call_lambda(value* lambda, value** args, size_t num_args, environment* env) {
     char* name = (lambda->symbol != NULL) ? lambda->symbol : "lambda";
 
@@ -985,4 +992,5 @@ void environment_register_builtins(environment* e) {
     environment_register_function(e, "shead", builtin_shead);
     environment_register_function(e, "stail", builtin_stail);
     environment_register_function(e, "sinit", builtin_sinit);
+    environment_register_function(e, "slen", builtin_slen);
 }
