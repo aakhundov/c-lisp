@@ -931,6 +931,50 @@ static void test_load(environment* env) {
     test_error_output(env, "load \"lib/malformed.txt\"", "parsing error");
 }
 
+static void test_sjoin(environment* env) {
+    test_full_output(env, "sjoin \"a\" \"b\"", "\"ab\"");
+    test_full_output(env, "sjoin \"abc\" \"de\" \"f\"", "\"abcdef\"");
+    test_full_output(env, "sjoin \"\" \"b\"", "\"b\"");
+    test_full_output(env, "sjoin \"\" \"\"", "\"\"");
+    test_full_output(env, "sjoin \"abc\"", "\"abc\"");
+
+    test_error_output(env, "sjoin 1", "arg #0 (1) must be of type string");
+    test_error_output(env, "sjoin \"a\" 1", "arg #1 (1) must be of type string");
+}
+
+static void test_shead(environment* env) {
+    test_full_output(env, "shead \"abc\"", "\"a\"");
+    test_full_output(env, "shead \" xyz\"", "\" \"");
+    test_full_output(env, "shead \"xyz \"", "\"x\"");
+    test_full_output(env, "shead \"x\"", "\"x\"");
+
+    test_error_output(env, "shead 1", "arg #0 (1) must be of type string");
+    test_error_output(env, "shead \"a\" \"b\"", "expects exactly 1 arg");
+    test_error_output(env, "shead \"\"", "arg #0 must be at least 1-long");
+}
+
+static void test_stail(environment* env) {
+    test_full_output(env, "stail \"abc\"", "\"bc\"");
+    test_full_output(env, "stail \" xyz\"", "\"xyz\"");
+    test_full_output(env, "stail \"xyz \"", "\"yz \"");
+    test_full_output(env, "stail \"x\"", "\"\"");
+
+    test_error_output(env, "stail 1", "arg #0 (1) must be of type string");
+    test_error_output(env, "stail \"a\" \"b\"", "expects exactly 1 arg");
+    test_error_output(env, "stail \"\"", "arg #0 must be at least 1-long");
+}
+
+static void test_sinit(environment* env) {
+    test_full_output(env, "sinit \"abc\"", "\"ab\"");
+    test_full_output(env, "sinit \" xyz\"", "\" xy\"");
+    test_full_output(env, "sinit \"xyz \"", "\"xyz\"");
+    test_full_output(env, "sinit \"x\"", "\"\"");
+
+    test_error_output(env, "sinit 1", "arg #0 (1) must be of type string");
+    test_error_output(env, "sinit \"a\" \"b\"", "expects exactly 1 arg");
+    test_error_output(env, "sinit \"\"", "arg #0 must be at least 1-long");
+}
+
 void run_test() {
     counter = 0;
 
@@ -978,4 +1022,8 @@ void run_test() {
 
     RUN_TEST_FN(test_seval);
     RUN_TEST_FN(test_load);
+    RUN_TEST_FN(test_sjoin);
+    RUN_TEST_FN(test_shead);
+    RUN_TEST_FN(test_stail);
+    RUN_TEST_FN(test_sinit);
 }

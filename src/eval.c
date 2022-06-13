@@ -684,6 +684,106 @@ static value* builtin_load(value** args, size_t num_args, char* name, environmen
     return result;
 }
 
+static value* builtin_print(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 1);
+
+    char buffer[1024];
+    for (size_t i = 0; i < num_args; i++) {
+        value_to_str(args[i], buffer);
+        printf("%s", buffer);
+        if (i < num_args - 1) {
+            printf(" ");
+        }
+    }
+    printf("\n");
+
+    return value_new_sexpr();
+}
+
+static value* builtin_error(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_STRING, 0);
+
+    return value_new_error(args[0]->symbol);
+}
+
+static value* builtin_info(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_STRING, 0);
+
+    return value_new_info(args[0]->symbol);
+}
+
+static value* builtin_sjoin(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_MIN_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARGS_TYPE(name, args, VALUE_STRING, num_args, 0);
+
+    size_t dest_len = 0;
+    for (size_t i = 0; i < num_args; i++) {
+        dest_len += strlen(args[i]->symbol);
+    }
+
+    char* dest = malloc(dest_len + 1);
+    char* running = dest;
+    for (size_t i = 0; i < num_args; i++) {
+        running += sprintf(running, "%s", args[i]->symbol);
+    }
+    value* result = value_new_string(dest);
+    free(dest);
+
+    return result;
+}
+
+static value* builtin_shead(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_STRING, 0);
+
+    size_t len = strlen(args[0]->symbol);
+    if (len < 1) {
+        return value_new_error(
+            "%s: arg #%d must be at least %d-long, but got %d-long",
+            name, 0, 1, 0);
+    }
+
+    char dest[2];
+    snprintf(dest, 2, "%s", args[0]->symbol);
+
+    return value_new_string(dest);
+}
+
+static value* builtin_stail(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_STRING, 0);
+
+    size_t len = strlen(args[0]->symbol);
+    if (len < 1) {
+        return value_new_error(
+            "%s: arg #%d must be at least %d-long, but got %d-long",
+            name, 0, 1, 0);
+    }
+
+    return value_new_string(args[0]->symbol + 1);
+}
+
+static value* builtin_sinit(value** args, size_t num_args, char* name, environment* env) {
+    ASSERT_NUM_ARGS(name, num_args, 1);
+    ASSERT_ARG_TYPE(name, args[0], VALUE_STRING, 0);
+
+    size_t len = strlen(args[0]->symbol);
+    if (len < 1) {
+        return value_new_error(
+            "%s: arg #%d must be at least %d-long, but got %d-long",
+            name, 0, 1, 0);
+    }
+
+    char* dest = malloc(len);
+    snprintf(dest, len, "%s", args[0]->symbol);
+    value* result = value_new_string(dest);
+    free(dest);
+
+    return result;
+}
+
 static value* call_lambda(value* lambda, value** args, size_t num_args, environment* env) {
     char* name = (lambda->symbol != NULL) ? lambda->symbol : "lambda";
 
@@ -723,7 +823,9 @@ static value* call_lambda(value* lambda, value** args, size_t num_args, environm
 static int is_delayed_evaluation_function(value* fn) {
     assert(fn->type == VALUE_FUNCTION);
 
-    if (fn->builtin == builtin_and || fn->builtin == builtin_or || fn->builtin == builtin_cond) {
+    if (fn->builtin == builtin_and ||
+        fn->builtin == builtin_or ||
+        fn->builtin == builtin_cond) {
         return 1;
     } else {
         return 0;
@@ -876,4 +978,11 @@ void environment_register_builtins(environment* e) {
     // string functions
     environment_register_function(e, "seval", builtin_seval);
     environment_register_function(e, "load", builtin_load);
+    environment_register_function(e, "print", builtin_print);
+    environment_register_function(e, "error", builtin_error);
+    environment_register_function(e, "info", builtin_info);
+    environment_register_function(e, "sjoin", builtin_sjoin);
+    environment_register_function(e, "shead", builtin_shead);
+    environment_register_function(e, "stail", builtin_stail);
+    environment_register_function(e, "sinit", builtin_sinit);
 }
