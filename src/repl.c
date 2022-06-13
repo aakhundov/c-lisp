@@ -30,6 +30,25 @@ typedef enum {
     COMMAND_OTHER = -1
 } command_type;
 
+static void get_input(char* input) {
+    char* running = input;
+
+    int done = 0;
+    while (!done) {
+        char* line = readline("> ");
+        size_t len = strlen(line);
+        if (len >= 3 && strcmp(line + len - 3, "...") == 0) {
+            line[len - 3] = ' ';
+            line[len - 2] = '\0';
+        } else {
+            done = 1;
+        }
+
+        running += sprintf(running, "%s", line);
+        free(line);
+    }
+}
+
 static command_type get_command_type(char* line) {
     size_t num_command_types = sizeof(commands) / sizeof(char**);
     for (size_t i = 0; i < num_command_types; i++) {
@@ -55,24 +74,23 @@ static void process_repl_command(environment* env, char* input, char* output) {
     }
 
     value_to_str(v, output);
-    printf("%s\n", output);
     value_dispose(v);
 }
 
 void run_repl() {
-    puts("mylisp version 0.0.1");
-    puts("enter \"quit\" to quit\n");
+    printf("mylisp version 0.0.1\n");
+    printf("type in \"q\" to quit\n\n");
 
     environment env;
     environment_init(&env);
     environment_register_builtins(&env);
 
     int stop = 0;
-    char output[16384];
+    char input[65536];
+    char output[65536];
 
     while (!stop) {
-        char* input = readline("> ");
-
+        get_input(input);
         switch (get_command_type(input)) {
             case COMMAND_EXIT:
                 stop = 1;
@@ -86,9 +104,8 @@ void run_repl() {
                 break;
             default:
                 process_repl_command(&env, input, output);
+                printf("%s\n", output);
         }
-
-        free(input);
     }
 
     environment_dispose(&env);
