@@ -6,6 +6,7 @@
 
 #include "env.h"
 #include "eval.h"
+#include "parse.h"
 #include "value.h"
 
 #define RUN_TEST_FN(fn)                        \
@@ -25,14 +26,11 @@ static int counter = 0;
 static value* get_evaluated(environment* env, char* input) {
     char output[1024];
 
-    int parsed = 1;
     value* v = value_parse(input);
     if (v->type != VALUE_ERROR) {
         value* e = value_evaluate(v, env);
         value_dispose(v);
         v = e;
-    } else {
-        parsed = 0;
     }
 
     value_to_str(v, output);
@@ -43,13 +41,7 @@ static value* get_evaluated(environment* env, char* input) {
         "\x1B[34m[\x1B[0m%s\x1B[34m]\x1B[0m\n",
         ++counter, input, output);
 
-    if (parsed) {
-        return v;
-    } else {
-        printf("PARSING ERROR\n");
-        value_dispose(v);
-        exit(1);
-    }
+    return v;
 }
 
 static void test_number_output(environment* env, char* input, double expected) {
@@ -101,6 +93,43 @@ static void test_full_output(environment* env, char* input, char* expected) {
         assert(strcmp(buffer, expected) == 0);
         value_dispose(e);
     }
+}
+
+static void test_parsing(environment* env) {
+    test_number_output(env, "1", 1);
+    test_number_output(env, ".14", 0.14);
+    test_number_output(env, "3.", 3);
+    test_number_output(env, "3.14", 3.14);
+    test_number_output(env, "3.14e1", 31.4);
+    test_number_output(env, "3.14E+1", 31.4);
+    test_number_output(env, "+3.14E-1", 0.314);
+    test_number_output(env, "-3.14e-1", -0.314);
+    test_bool_output(env, "#true", 1);
+    test_bool_output(env, "#false", 0);
+    test_full_output(env, "#null", "{}");
+    test_full_output(env, "\"\"", "\"\"");
+    test_full_output(env, "\"abc\"", "\"abc\"");
+    test_full_output(env, "()", "()");
+    test_full_output(env, "{}", "{}");
+    test_full_output(env, "{1}", "{1}");
+    test_full_output(env, "{1 2 3}", "{1 2 3}");
+    test_full_output(env, "{{1 2} 3 {4 5 {6}}}", "{{1 2} 3 {4 5 {6}}}");
+    test_full_output(env, "(+ 1 2 3)", "6");
+    test_full_output(env, "{(+ 1 2 3) 4}", "{(+ 1 2 3) 4}");
+    test_full_output(env, "+", "<builtin +>");
+    test_full_output(env, "join", "<builtin join>");
+
+    test_error_output(env, "3.1.4", "undefined symbol: 3.1.4");
+    test_error_output(env, "3.14e5e", "undefined symbol: 3.14e5e");
+    test_error_output(env, "3.14e5+", "undefined symbol: 3.14e5+");
+    test_error_output(env, "3.14e1.2", "undefined symbol: 3.14e1.2");
+    test_error_output(env, ".", "undefined symbol: .");
+    test_error_output(env, "\"abc", "parsing error: unterminated string");
+    test_error_output(env, "(+ 1 2 3", "parsing error: missing ')'");
+    test_error_output(env, "{(+ 1 2 3) 4", "parsing error: missing '}'");
+    test_error_output(env, "{(+ 1 2 3 4}", "parsing error: premature '}'");
+    test_error_output(env, "#fake", "parsing error: unknown special symbol: #fake");
+    test_error_output(env, "$", "parsing error: unexpected symbol '$'");
 }
 
 static void test_numeric(environment* env) {
@@ -996,6 +1025,7 @@ static void test_slen(environment* env) {
 void run_test() {
     counter = 0;
 
+    RUN_TEST_FN(test_parsing);
     RUN_TEST_FN(test_numeric);
     RUN_TEST_FN(test_errors);
     RUN_TEST_FN(test_full);

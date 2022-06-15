@@ -1,14 +1,12 @@
 #include "value.h"
 
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "parse.h"
 #include "str.h"
-
-static value* value_from_tree(parser_tree* t);
 
 value* value_new_number(double number) {
     value* v = malloc(sizeof(value));
@@ -190,99 +188,6 @@ void value_add_child(value* parent, value* child) {
 
     parent->children[parent->num_children] = child;
     parent->num_children++;
-}
-
-static value* value_read_number(char* content) {
-    errno = 0;
-    double result = strtod(content, NULL);
-
-    if (errno == 0) {
-        return value_new_number(result);
-    } else {
-        return value_new_error("malformed number: %s", content);
-    }
-}
-
-static value* value_read_special(char* content) {
-    if (strcmp(content, "#true") == 0) {
-        return value_new_bool(1);
-    } else if (strcmp(content, "#false") == 0) {
-        return value_new_bool(0);
-    } else if (strcmp(content, "#null") == 0) {
-        return value_new_qexpr();
-    } else {
-        return value_new_error("unknown special symbol: %s", content);
-    }
-}
-
-static value* value_read_string(char* content) {
-    size_t len = strlen(content);
-    content[len - 1] = '\0';  // remove trailing quote
-    content++;                // remove leading quote
-
-    char* unescaped = str_unescape(content);
-    value* result = value_new_string(unescaped);
-    free(unescaped);
-
-    return result;
-}
-
-static value* value_read_expr(parser_tree* t) {
-    value* expr = NULL;
-    if (strcmp(t->tag, ">") == 0 || strstr(t->tag, "sexpr")) {
-        expr = value_new_sexpr();
-    } else if (strstr(t->tag, "qexpr")) {
-        expr = value_new_qexpr();
-    }
-
-    for (size_t i = 0; i < t->num_children; i++) {
-        parser_tree child = parser_tree_get_child(t, i);
-
-        if (strcmp(child.content, "(") == 0 ||
-            strcmp(child.content, ")") == 0 ||
-            strcmp(child.content, "{") == 0 ||
-            strcmp(child.content, "}") == 0 ||
-            strcmp(child.tag, "regex") == 0 ||
-            strstr(child.tag, "comment")) {
-            continue;
-        }
-
-        value_add_child(expr, value_from_tree(&child));
-    }
-
-    return expr;
-}
-
-static value* value_from_tree(parser_tree* t) {
-    if (strstr(t->tag, "number")) {
-        return value_read_number(t->content);
-    } else if (strstr(t->tag, "symbol")) {
-        return value_new_symbol(t->content);
-    } else if (strstr(t->tag, "special")) {
-        return value_read_special(t->content);
-    } else if (strstr(t->tag, "string")) {
-        return value_read_string(t->content);
-    } else {
-        return value_read_expr(t);
-    }
-}
-
-value* value_parse(char* input) {
-    value* v = NULL;
-
-    parser_result r;
-    if (parser_parse(input, &r)) {
-        parser_tree t = parser_result_get_tree(&r);
-        v = value_from_tree(&t);
-        parser_result_dispose_tree(&r);
-    } else {
-        char buffer[1024];
-        parser_result_get_error(&r, buffer);
-        v = value_new_error("parsing error: %s", buffer);
-        parser_result_dispose_error(&r);
-    }
-
-    return v;
 }
 
 value* value_copy(value* v) {

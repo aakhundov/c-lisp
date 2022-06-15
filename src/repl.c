@@ -7,6 +7,7 @@
 #include "edit.h"
 #include "env.h"
 #include "eval.h"
+#include "parse.h"
 #include "value.h"
 
 static const char* exit_commands[] = {"exit", "quit", "q"};

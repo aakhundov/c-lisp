@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "env.h"
+#include "parse.h"
 #include "value.h"
 
 #define ASSERT_NUM_ARGS(fn, num_args, expected_num_args) \
@@ -658,12 +659,16 @@ static value* builtin_load(value** args, size_t num_args, char* name, environmen
     ASSERT_ARG_TYPE(name, args[0], VALUE_STRING, 0);
 
     value* result = NULL;
-
-    char content[65536];
     FILE* file = fopen(args[0]->symbol, "r");
+
     if (file) {
-        int read = fread(content, 1, sizeof(content), file);
-        content[read] = '\0';  // guard against the old call stack
+        fseek(file, 0, SEEK_END);
+        long length = ftell(file);
+        fseek(file, 0, SEEK_SET);
+        char* content = malloc(length + 1);
+        fread(content, 1, length, file);
+        content[length] = '\0';
+
         if (ferror(file)) {
             result = value_new_error("error reading from file: %s", args[0]->symbol);
         } else {
@@ -676,6 +681,8 @@ static value* builtin_load(value** args, size_t num_args, char* name, environmen
 
             value_dispose(seval_args);
         }
+
+        free(content);
         fclose(file);
     } else {
         result = value_new_error("failed to open file: %s", args[0]->symbol);
