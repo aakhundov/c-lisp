@@ -373,6 +373,9 @@ static void test_lambda(environment* env) {
     test_full_output(env, "lambda {x} {x}", "<lambda {x} {x}>");
     test_full_output(env, "lambda {} {x}", "<lambda {} {x}>");
     test_full_output(env, "lambda {x y} {+ x y}", "<lambda {x y} {+ x y}>");
+    test_full_output(env, "lambda {x & y} {+ x (eval (cons + y))}", "<lambda {x & y} {+ x (eval (cons + y))}>");
+    test_full_output(env, "lambda {& y} {eval (cons + y)}", "<lambda {& y} {eval (cons + y)}>");
+    test_full_output(env, "lambda {x y & z} {+ x y (len z)}", "<lambda {x y & z} {+ x y (len z)}>");
 
     test_error_output(env, "lambda 1", "expects exactly 2 args");
     test_error_output(env, "lambda {x}", "expects exactly 2 args");
@@ -381,6 +384,8 @@ static void test_lambda(environment* env) {
     test_error_output(env, "lambda {x} 2", "arg #1 (2) must be of type q-expr");
     test_error_output(env, "lambda 1 {x}", "arg #0 (1) must be of type q-expr");
     test_error_output(env, "lambda {1} {x}", "arg #0 ({1}) must consist of symbol children");
+    test_error_output(env, "lambda {&} {1}", "exactly one argument must follow &");
+    test_error_output(env, "lambda {& y z} {1}", "exactly one argument must follow &");
     test_error_output(env, "lambda {x &} {1}", "exactly one argument must follow &");
     test_error_output(env, "lambda {x & y z} {1}", "exactly one argument must follow &");
 }
@@ -411,6 +416,8 @@ static void test_function_call(environment* env) {
     test_info_output(env, "def {fn-add} (lambda {x y z} {+ x y z})", "defined: fn-add");
     test_info_output(env, "def {fn-add-mul} (lambda {x y} {+ x (* x y)})", "defined: fn-add-mul");
     test_info_output(env, "def {fn-pack} (lambda {x & y} {join (list x) y})", "defined: fn-pack");
+    test_info_output(env, "def {fn-len} (lambda {& lst} {len lst})", "defined: fn-len");
+    test_info_output(env, "def {fn-add-len} (lambda {x y & z} {+ x y (len z)})", "defined: fn-add-len");
     test_info_output(env, "def {fn-curry} (lambda {f args} {eval (join (list f) args)})", "defined: fn-curry");
     test_info_output(env, "def {fn-uncurry} (lambda {f & args} {f args})", "defined: fn-uncurry");
     test_info_output(env, "def {fn-wrong} (lambda {x} {+ x y})", "defined: fn-wrong");
@@ -424,6 +431,9 @@ static void test_function_call(environment* env) {
     test_number_output(env, "fn-add-mul -7 5", -42);
     test_full_output(env, "fn-pack 1", "{1}");
     test_full_output(env, "fn-pack 1 2 3", "{1 2 3}");
+    test_number_output(env, "fn-len 1", 1);
+    test_number_output(env, "fn-len 1 1 1 1", 4);
+    test_number_output(env, "fn-add-len 1 2 3 4", 5);
     test_number_output(env, "fn-curry + {1 2 3}", 6);
     test_number_output(env, "fn-curry * {10 20}", 200);
     test_full_output(env, "fn-uncurry head 1 2 3", "{1}");
@@ -442,6 +452,8 @@ static void test_fn(environment* env) {
     test_info_output(env, "fn {fx-add x y z} {+ x y z}", "defined: fx-add");
     test_info_output(env, "fn {fx-add-mul x y} {+ x (* x y)}", "defined: fx-add-mul");
     test_info_output(env, "fn {fx-pack x & y} {join (list x) y}", "defined: fx-pack");
+    test_info_output(env, "fn {fn-len & lst} {len lst}", "defined: fn-len");
+    test_info_output(env, "fn {fn-add-len x y & z} {+ x y (len z)}", "defined: fn-add-len");
     test_info_output(env, "fn {fx-curry f args} {eval (join (list f) args)}", "defined: fx-curry");
     test_info_output(env, "fn {fx-uncurry f & args} {f args}", "defined: fx-uncurry");
     test_info_output(env, "fn {fx-wrong x} {+ x y}", "defined: fx-wrong");
@@ -455,6 +467,9 @@ static void test_fn(environment* env) {
     test_number_output(env, "fx-add-mul -7 5", -42);
     test_full_output(env, "fx-pack 1", "{1}");
     test_full_output(env, "fx-pack 1 2 3", "{1 2 3}");
+    test_number_output(env, "fn-len 1", 1);
+    test_number_output(env, "fn-len 1 1 1 1", 4);
+    test_number_output(env, "fn-add-len 1 2 3 4", 5);
     test_number_output(env, "fx-curry + {1 2 3}", 6);
     test_number_output(env, "fx-curry * {10 20}", 200);
     test_full_output(env, "fx-uncurry head 1 2 3", "{1}");

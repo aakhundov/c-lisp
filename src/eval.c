@@ -350,9 +350,12 @@ static value* builtin_lambda(value** args, size_t num_args, char* name, environm
     ASSERT_ARG_TYPE(name, args[1], VALUE_QEXPR, 1);
     ASSERT_EXPR_CHILDREN_TYPE(name, args[0], VALUE_SYMBOL, 0);
 
-    if (args[0]->num_children > 1 && strcmp(args[0]->children[1]->symbol, "&") == 0) {
-        if (args[0]->num_children != 3) {
-            return value_new_error("exactly one argument must follow &");
+    for (size_t i = 0; i < args[0]->num_children; i++) {
+        if (strcmp(args[0]->children[i]->symbol, "&") == 0) {
+            if (args[0]->num_children != i + 2) {
+                return value_new_error("exactly one argument must follow &");
+            }
+            break;
         }
     }
 
@@ -801,8 +804,18 @@ static value* builtin_slen(value** args, size_t num_args, char* name, environmen
 static value* call_lambda(value* lambda, value** args, size_t num_args, environment* env) {
     char* name = (lambda->symbol != NULL) ? lambda->symbol : "lambda";
 
-    if (lambda->args->num_children > 1 && strcmp(lambda->args->children[1]->symbol, "&") == 0) {
-        ASSERT_MIN_NUM_ARGS(name, num_args, 1);
+    int has_amp = 0;
+    int num_args_before_amp = 0;
+    for (size_t i = 0; i < lambda->args->num_children; i++) {
+        if (strcmp(lambda->args->children[i]->symbol, "&") == 0) {
+            has_amp = 1;
+            num_args_before_amp = i;
+            break;
+        }
+    }
+
+    if (has_amp) {
+        ASSERT_MIN_NUM_ARGS(name, num_args, num_args_before_amp);
     } else {
         ASSERT_NUM_ARGS(name, num_args, lambda->args->num_children);
     }
@@ -811,18 +824,16 @@ static value* call_lambda(value* lambda, value** args, size_t num_args, environm
     environment_init(&local);
     local.parent = env;
 
-    if (lambda->args->num_children > 1 && strcmp(lambda->args->children[1]->symbol, "&") == 0) {
-        value* rest = value_new_qexpr();
-        for (size_t i = 1; i < num_args; i++) {
-            value_add_child(rest, value_copy(args[i]));
-        }
-
-        environment_put(&local, lambda->args->children[0]->symbol, args[0], 1);
-        environment_put(&local, lambda->args->children[2]->symbol, rest, 1);
-
-        value_dispose(rest);
-    } else {
-        for (size_t i = 0; i < lambda->args->num_children; i++) {
+    for (size_t i = 0; i < lambda->args->num_children; i++) {
+        if (strcmp(lambda->args->children[i]->symbol, "&") == 0) {
+            value* rest = value_new_qexpr();
+            for (size_t j = i; j < num_args; j++) {
+                value_add_child(rest, value_copy(args[j]));
+            }
+            environment_put(&local, lambda->args->children[i + 1]->symbol, rest, 1);
+            value_dispose(rest);
+            break;
+        } else {
             environment_put(&local, lambda->args->children[i]->symbol, args[i], 1);
         }
     }
@@ -954,6 +965,7 @@ void environment_register_builtins(environment* e) {
     // definition builtins
     environment_register_function(e, "def", builtin_def);
     environment_register_function(e, "local", builtin_local);
+    environment_register_function(e, "=", builtin_local);
     environment_register_function(e, "lambda", builtin_lambda);
     environment_register_function(e, "fn", builtin_fn);
     environment_register_function(e, "del", builtin_del);
