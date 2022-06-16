@@ -1,6 +1,7 @@
 #ifndef VALUE_H_
 #define VALUE_H_
 
+#include <stdarg.h>
 #include <stdlib.h>
 
 typedef enum {
@@ -35,7 +36,9 @@ struct value {
 value* value_new_number(double number);
 value* value_new_symbol(char* symbol);
 value* value_new_error(char* error, ...);
-value* value_new_info(char* error, ...);
+value* value_new_error_from_args(char* error, va_list args);
+value* value_new_info(char* info, ...);
+value* value_new_info_from_args(char* info, va_list args);
 value* value_new_string(char* symbol);
 value* value_new_bool(int truth);
 value* value_new_function(value* function);

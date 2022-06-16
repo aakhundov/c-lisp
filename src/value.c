@@ -34,13 +34,25 @@ static value* value_new_symbol_from_args(char* format, va_list args) {
     return value_new_symbol(buffer);
 }
 
+value* value_new_error_from_args(char* error, va_list args) {
+    value* v = value_new_symbol_from_args(error, args);
+    v->type = VALUE_ERROR;
+
+    return v;
+}
+
 value* value_new_error(char* error, ...) {
     va_list args;
     va_start(args, error);
-    value* v = value_new_symbol_from_args(error, args);
+    value* v = value_new_error_from_args(error, args);
     va_end(args);
 
-    v->type = VALUE_ERROR;
+    return v;
+}
+
+value* value_new_info_from_args(char* info, va_list args) {
+    value* v = value_new_symbol_from_args(info, args);
+    v->type = VALUE_INFO;
 
     return v;
 }
@@ -48,10 +60,8 @@ value* value_new_error(char* error, ...) {
 value* value_new_info(char* info, ...) {
     va_list args;
     va_start(args, info);
-    value* v = value_new_symbol_from_args(info, args);
+    value* v = value_new_info_from_args(info, args);
     va_end(args);
-
-    v->type = VALUE_INFO;
 
     return v;
 }

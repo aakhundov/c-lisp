@@ -124,12 +124,12 @@ static void test_parsing(environment* env) {
     test_error_output(env, "3.14e5+", "undefined symbol: 3.14e5+");
     test_error_output(env, "3.14e1.2", "undefined symbol: 3.14e1.2");
     test_error_output(env, ".", "undefined symbol: .");
-    test_error_output(env, "\"abc", "parsing error: unterminated string");
-    test_error_output(env, "(+ 1 2 3", "parsing error: missing ')'");
-    test_error_output(env, "{(+ 1 2 3) 4", "parsing error: missing '}'");
-    test_error_output(env, "{(+ 1 2 3 4}", "parsing error: premature '}'");
-    test_error_output(env, "#fake", "parsing error: unknown special symbol: #fake");
-    test_error_output(env, "$", "parsing error: unexpected symbol '$'");
+    test_error_output(env, "\"abc", "parsing error at 1: unterminated string");
+    test_error_output(env, "(+ 1 2 3", "parsing error at 9: missing ')'");
+    test_error_output(env, "{(+ 1 2 3) 4", "parsing error at 13: missing '}'");
+    test_error_output(env, "{(+ 1 2 3 4}", "parsing error at 12: premature '}'");
+    test_error_output(env, "#fake", "parsing error at 1: unknown special symbol: #fake");
+    test_error_output(env, "$", "parsing error at 1: unexpected symbol '$'");
 }
 
 static void test_numeric(environment* env) {

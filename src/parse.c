@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,6 +22,20 @@ static const char* symbol_chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"
     "_+-*/%^\\=<>!&|?.";
+
+static value* create_parsing_error(size_t offset, char* format, ...) {
+    char extended_format[128];
+    snprintf(
+        extended_format, sizeof(extended_format),
+        "parsing error at %zu: %s", offset, format);
+
+    va_list args;
+    va_start(args, format);
+    value* error = value_new_error_from_args(extended_format, args);
+    va_end(args);
+
+    return error;
+}
 
 static int is_number(char* symbol) {
     char* running = symbol;
@@ -56,18 +71,18 @@ static int is_number(char* symbol) {
     return digit_seen;
 }
 
-static value* value_read_number(char* content) {
+static value* value_read_number(char* content, size_t offset) {
     errno = 0;
     double result = strtod(content, NULL);
 
     if (errno == 0) {
         return value_new_number(result);
     } else {
-        return value_new_error("parsing error: malformed number: %s", content);
+        return create_parsing_error(offset, "malformed number: %s", content);
     }
 }
 
-static value* value_read_special(char* content) {
+static value* value_read_special(char* content, size_t offset) {
     value* result = NULL;
 
     size_t length = strlen(content);
@@ -84,7 +99,7 @@ static value* value_read_special(char* content) {
     } else if (strcmp(lower, "#null") == 0) {
         result = value_new_qexpr();
     } else {
-        result = value_new_error("parsing error: unknown special symbol: %s", content);
+        result = create_parsing_error(offset, "unknown special symbol: %s", content);
     }
 
     free(lower);
@@ -92,7 +107,7 @@ static value* value_read_special(char* content) {
     return result;
 }
 
-static value* value_read_string(char* content) {
+static value* value_read_string(char* content, size_t offset) {
     size_t length = strlen(content);
     content[length - 1] = '\0';  // remove trailing quote
     content++;                   // remove leading quote
@@ -104,7 +119,7 @@ static value* value_read_string(char* content) {
     return result;
 }
 
-static int value_parse_symbol(char* input, value** v) {
+static int value_parse_symbol(char* input, value** v, size_t offset) {
     char* running = input;
     while (*running != '\0' && strchr(symbol_chars, *running)) {
         running++;
@@ -116,7 +131,7 @@ static int value_parse_symbol(char* input, value** v) {
     symbol[length] = '\0';
 
     if (is_number(symbol)) {
-        *v = value_read_number(symbol);
+        *v = value_read_number(symbol, offset);
     } else {
         *v = value_new_symbol(symbol);
     }
@@ -126,7 +141,7 @@ static int value_parse_symbol(char* input, value** v) {
     return length;
 }
 
-static int value_parse_special(char* input, value** v) {
+static int value_parse_special(char* input, value** v, size_t offset) {
     char* running = input + 1;
     while (*running != '\0' && strchr(alpha_chars, *running)) {
         running++;
@@ -137,18 +152,18 @@ static int value_parse_special(char* input, value** v) {
     strncpy(special, input, length);
     special[length] = '\0';
 
-    *v = value_read_special(special);
+    *v = value_read_special(special, offset);
 
     free(special);
 
     return length;
 }
 
-static int value_parse_string(char* input, value** v) {
+static int value_parse_string(char* input, value** v, size_t offset) {
     char* running = input + 1;
     while (!(*running == '\"' && *(running - 1) != '\\')) {
         if (*running == '\0') {
-            *v = value_new_error("parsing error: unterminated string");
+            *v = create_parsing_error(offset, "unterminated string");
             return running - input;
         }
         running++;
@@ -160,24 +175,26 @@ static int value_parse_string(char* input, value** v) {
     strncpy(string, input, length);
     string[length] = '\0';
 
-    *v = value_read_string(string);
+    *v = value_read_string(string, offset);
 
     free(string);
 
     return length;
 }
 
-static int value_parse_expr(char* input, value* v, char end) {
+static int value_parse_expr(char* input, value* v, char end, size_t offset) {
+    size_t pos = 0;
     char* running = input;
     while (*running != end) {
+        pos = offset + (running - input);
         if (*running == '\0') {
-            value* error = value_new_error("parsing error: missing '%c'", end);
+            value* error = create_parsing_error(pos, "missing '%c'", end);
             value_add_child(v, error);
             break;
         } else if (strchr(whitespace_chars, *running)) {
             running++;
         } else if (strchr("})", *running)) {
-            value* error = value_new_error("parsing error: premature '%c'", *running);
+            value* error = create_parsing_error(pos, "premature '%c'", *running);
             value_add_child(v, error);
             break;
         } else if (*running == ';') {
@@ -188,27 +205,27 @@ static int value_parse_expr(char* input, value* v, char end) {
         } else if (*running == '(') {
             running++;
             value* sexpr = value_new_sexpr();
-            running += value_parse_expr(running, sexpr, ')') + 1;
+            running += value_parse_expr(running, sexpr, ')', pos + 1) + 1;
             value_add_child(v, sexpr);
         } else if (*running == '{') {
             running++;
             value* qexpr = value_new_qexpr();
-            running += value_parse_expr(running, qexpr, '}') + 1;
+            running += value_parse_expr(running, qexpr, '}', pos + 1) + 1;
             value_add_child(v, qexpr);
         } else if (*running == '#') {
             value* special = NULL;
-            running += value_parse_special(running, &special);
+            running += value_parse_special(running, &special, pos);
             value_add_child(v, special);
         } else if (*running == '\"') {
             value* string = NULL;
-            running += value_parse_string(running, &string);
+            running += value_parse_string(running, &string, pos);
             value_add_child(v, string);
         } else if (strchr(symbol_chars, *running)) {
             value* symbol = NULL;
-            running += value_parse_symbol(running, &symbol);
+            running += value_parse_symbol(running, &symbol, pos);
             value_add_child(v, symbol);
         } else {
-            value* error = value_new_error("parsing error: unexpected symbol '%c'", *running);
+            value* error = create_parsing_error(pos, "unexpected symbol '%c'", *running);
             value_add_child(v, error);
             running += strlen(running);
             break;
@@ -236,7 +253,7 @@ static value* find_error(value* v) {
 
 value* value_parse(char* input) {
     value* v = value_new_sexpr();
-    value_parse_expr(input, v, 0);
+    value_parse_expr(input, v, 0, 1);
 
     value* e = find_error(v);
     if (e != NULL) {
